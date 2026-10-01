@@ -62,14 +62,23 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .pk-time{font:500 34px/1 var(--font-mono);color:var(--accent);letter-spacing:-.02em}
 .picker-lab{font:600 11px/1 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:6px}
 .chips{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;scrollbar-width:thin}
-.chip,.grid6 button{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);color:var(--fg)}
+.chip{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);color:var(--fg)}
 .chip{flex:none;min-width:64px;padding:7px 8px;text-align:center;scroll-snap-align:center;display:flex;flex-direction:column;gap:3px}
 .chip small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .chip b{font:600 14px/1 var(--font-body);white-space:nowrap}
-.grid6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
-.grid6 button{padding:9px 0;font:500 15px/1 var(--font-mono);font-variant-numeric:tabular-nums}
-.chip:hover,.grid6 button:hover{border-color:var(--muted)}
-.chip[aria-pressed="true"],.grid6 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+/* hour / minute wheels: vertical scroll-snap lists, the centred row is the value */
+.wheels{display:grid;grid-template-columns:auto auto auto;justify-content:center;column-gap:6px;row-gap:2px}
+.wheels .picker-lab{text-align:center}
+.wheel-wrap{position:relative;width:104px}
+.wheel-wrap::after{content:"";position:absolute;left:0;right:0;top:80px;height:40px;border:1px solid var(--accent);border-radius:8px;background:color-mix(in srgb,var(--accent) 12%,transparent);pointer-events:none}
+.wheel{height:200px;overflow-y:auto;scroll-snap-type:y mandatory;padding-block:80px;scrollbar-width:none;overscroll-behavior:contain;-webkit-mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent);mask-image:linear-gradient(transparent,#000 32%,#000 68%,transparent)}
+.wheel::-webkit-scrollbar{display:none}
+.wheel:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.wheel-item{height:40px;display:grid;place-items:center;scroll-snap-align:center;font:500 22px/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--muted);cursor:pointer;user-select:none;-webkit-user-select:none}
+.wheel-item.sel{color:var(--fg)}
+.wheel-colon{align-self:center;font:500 24px/1 var(--font-mono);color:var(--muted);padding-bottom:3px}
+.chip:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
 .chip[aria-pressed="true"] small{color:inherit;opacity:.85}
 .btn.small{padding:7px 12px;font-size:14px}
 
@@ -226,10 +235,12 @@ footer a{color:inherit}
       <div class="picker-head"><output id="when-big" for="arr-when"></output><button type="button" class="btn ghost small" id="when-now" data-i18n="pk_now"></button></div>
       <div class="picker-lab" data-i18n="pk_day"></div>
       <div class="chips" id="when-days" role="group"></div>
-      <div class="picker-lab" data-i18n="pk_hour"></div>
-      <div class="grid6" id="when-hours" role="group"></div>
-      <div class="picker-lab" data-i18n="pk_min"></div>
-      <div class="grid6" id="when-mins" role="group"></div>
+      <div class="wheels">
+        <div class="picker-lab" id="lab-h" data-i18n="pk_hour"></div><div></div><div class="picker-lab" id="lab-m" data-i18n="pk_min"></div>
+        <div class="wheel-wrap"><div class="wheel" id="when-hours" role="listbox" tabindex="0" aria-labelledby="lab-h"></div></div>
+        <div class="wheel-colon" aria-hidden="true">:</div>
+        <div class="wheel-wrap"><div class="wheel" id="when-mins" role="listbox" tabindex="0" aria-labelledby="lab-m"></div></div>
+      </div>
       <button type="button" class="btn primary" id="when-done" data-i18n="pk_done"></button>
     </div>
     <button class="btn primary" id="btn-find" type="button" data-i18n="find"></button>
@@ -599,15 +610,41 @@ const fmtL = (d, o)=> new Intl.DateTimeFormat(locale(), o).format(d);
 function getWhen(){ const v=$('arr-when').value; const d = v ? new Date(v) : new Date(); return isNaN(d) ? new Date() : d; }
 function setWhen(d, center){ $('arr-when').value = toLocalInputValue(d); paintWhen(center); }
 function dayName(d){ const diff=Math.round((startOfDay(d)-startOfDay(new Date()))/864e5); return diff===0 ? t('pk_today') : diff===1 ? t('pk_tomorrow') : fmtL(d,{weekday:'short', day:'numeric', month:'short'}); }
-function gridButtons(el, values, selected, onPick){
-  el.innerHTML='';
-  values.forEach(v=>{ const b=document.createElement('button'); b.type='button'; b.textContent=pad2(v); b.setAttribute('aria-pressed', String(v===selected)); b.addEventListener('click', ()=> onPick(v)); el.appendChild(b); });
+/* wheels: built once; scrolling (or arrow keys / a tap on a row) picks the value, the centred row is selected */
+const WH = 40;
+function buildWheel(el, n, onPick){
+  for(let i=0;i<n;i++){ const o=document.createElement('div'); o.className='wheel-item'; o.setAttribute('role','option'); o.textContent=pad2(i);
+    o.addEventListener('click', ()=>{ el.scrollTop=i*WH; onPick(i); }); el.appendChild(o); }
+  let raf=0;
+  el.addEventListener('scroll', ()=>{ cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ const i=Math.max(0, Math.min(n-1, Math.round(el.scrollTop/WH))); if(i!==el._val) onPick(i, true); }); });
+  el.addEventListener('keydown', e=>{
+    const d = e.key==='ArrowDown'?1 : e.key==='ArrowUp'?-1 : e.key==='PageDown'?5 : e.key==='PageUp'?-5 : 0; if(!d) return;
+    e.preventDefault(); const i=Math.max(0, Math.min(n-1, (el._val||0)+d)); el.scrollTop=i*WH; onPick(i);
+  });
 }
-function paintWhen(center){
+function markWheel(el, v){
+  if(el._val===v) return;
+  el.children[el._val]?.classList.remove('sel'); el.children[el._val]?.setAttribute('aria-selected','false');
+  el._val=v; el.children[v]?.classList.add('sel'); el.children[v]?.setAttribute('aria-selected','true');
+}
+function setWheel(el, v){ markWheel(el, v); if(Math.abs(el.scrollTop - v*WH) > 1) el.scrollTop = v*WH; }   // only while the panel is visible
+function pickPart(part, i, fromScroll){
+  const n=getWhen(); if(part==='h') n.setHours(i); else n.setMinutes(i,0,0);
+  $('arr-when').value = toLocalInputValue(n); paintText();
+  markWheel($(part==='h' ? 'when-hours' : 'when-mins'), i);
+  if(!fromScroll) paintWhen();
+}
+buildWheel($('when-hours'), 24, (i,sc)=> pickPart('h', i, sc));
+buildWheel($('when-mins'), 60, (i,sc)=> pickPart('m', i, sc));
+function paintText(){
   const d=getWhen(); const hm=`${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
   $('when-text').textContent = `${dayName(d)}, ${hm}`;
   $('when-big').innerHTML = `<span class="pk-day">${escapeHtml(fmtL(d,{weekday:'long', day:'numeric', month:'long'}))}</span><span class="pk-time">${hm}</span>`;
+}
+function paintWhen(center){
+  paintText();
   if(!pk.open) return;
+  const d=getWhen();
   const days=$('when-days'), keep=days.scrollLeft; days.innerHTML=''; let sel=null;
   const today=startOfDay(new Date());
   for(let i=0;i<21;i++){
@@ -619,8 +656,7 @@ function paintWhen(center){
     days.appendChild(b); if(on) sel=b;
   }
   days.scrollLeft = (center && sel) ? sel.offsetLeft - (days.clientWidth - sel.offsetWidth)/2 : keep;
-  gridButtons($('when-hours'), Array.from({length:24},(_,h)=>h), d.getHours(), h=>{ const n=getWhen(); n.setHours(h); setWhen(n); });
-  gridButtons($('when-mins'), Array.from({length:12},(_,m)=>m*5), d.getMinutes(), m=>{ const n=getWhen(); n.setMinutes(m,0,0); setWhen(n); });
+  setWheel($('when-hours'), d.getHours()); setWheel($('when-mins'), d.getMinutes());
 }
 function openWhen(open){
   pk.open=open; $('when-panel').hidden=!open; $('when-btn').setAttribute('aria-expanded', String(open));
