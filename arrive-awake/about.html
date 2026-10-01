@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>About Arrive Awake</title>
+<meta name="description" content="What Arrive Awake does, how it decides when to ring, and which countries have live train delays.">
+<meta name="theme-color" content="#0b0c10">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#0b0c10; --surface:#15171e; --surface-2:#1d2029; --fg:#f2efe6; --muted:#9a9890; --line:#2a2d38;
+  --accent:#f2a93b; --accent-ink:#1a1206; --ok:#5fc48f; --warn:#f2a93b; --bad:#ef6b5e; --info:#6fb3f2;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif; --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif; --font-mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){ --bg:#f6f3ec; --surface:#ffffff; --surface-2:#ece8de; --fg:#1b1a17; --muted:#6b6962; --line:#dcd7cb; --accent:#b86f0c; --accent-ink:#ffffff; --ok:#1f8a55; --warn:#b86f0c; --bad:#c0392b; --info:#1f6fb8; color-scheme:light } }
+:root[data-theme="light"]{ --bg:#f6f3ec; --surface:#ffffff; --surface-2:#ece8de; --fg:#1b1a17; --muted:#6b6962; --line:#dcd7cb; --accent:#b86f0c; --accent-ink:#ffffff; --ok:#1f8a55; --warn:#b86f0c; --bad:#c0392b; --info:#1f6fb8; color-scheme:light }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--font-body)}
+.wrap{max-width:40rem;margin:0 auto;padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 14px) 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:22px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand img{width:34px;height:34px}
+.brand h1{font:600 26px/1 var(--font-display);margin:0}
+.brand small{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+a{color:var(--accent)}
+a.btn{display:inline-block;background:var(--accent);color:var(--accent-ink);text-decoration:none;font-weight:600;padding:10px 16px;border-radius:10px}
+h2{font:600 15px/1.2 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:30px 0 10px}
+p{margin:0 0 10px}
+ul{margin:0 0 10px;padding-left:20px}
+li{margin-bottom:6px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.steps{display:grid;gap:10px}
+.steps .card b{font:600 18px/1.1 var(--font-display)}
+.map{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:4px;max-width:30rem}
+.tile{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font:500 12px var(--font-mono);color:#fff;position:relative}
+.tile.full{background:var(--ok);color:#06130c}
+.tile.partial{background:var(--warn);color:#1a1206}
+.tile.none{background:var(--bad);color:#fff}
+.tile.ext::after{content:"";position:absolute;right:3px;top:3px;width:6px;height:6px;border-radius:50%;background:var(--fg);opacity:.85}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:10px 0 0;font-size:13px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-top:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em;border-top:0}
+.tag{display:inline-block;font:500 11px/1 var(--font-mono);padding:4px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.tag.ok{color:var(--ok);border-color:var(--ok)} .tag.warn{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--bad);border-color:var(--bad)}
+.muted{color:var(--muted)}
+footer{margin-top:36px;color:var(--muted);font-size:13px}
+.de{border-left:3px solid var(--accent);padding-left:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><img src="icon.svg" alt=""><div><h1>Arrive Awake</h1><small>What it does and where it works</small></div></div>
+    <a class="btn" href="./">Open the app →</a>
+  </header>
+
+  <p>A fixed alarm fails on a night train: you set it for 06:00 because arrival is 06:30, and then the train runs two hours late.
+  Arrive Awake wakes you, or simply tells you to pack up if you are working, a chosen number of minutes before the <strong>real, delay-adjusted arrival</strong>.
+  It is a free web app for your phone, in English and German, with nothing to install beyond "Add to Home Screen".</p>
+
+  <h2>How a trip works</h2>
+  <div class="steps">
+    <div class="card"><b>1 · Pick your stop</b><br>Any station in Europe. You immediately see how good the live data for that country is.</div>
+    <div class="card"><b>2 · Pick your train</b><br>Arrivals around your planned time. Night trains are marked, coupled train portions are grouped, a green badge shows live data.</div>
+    <div class="card"><b>3 · Set the lead time</b><br>"Wake me 20 minutes before arrival." Arm it, dim the screen, go to sleep. The alarm time moves with the train.</div>
+  </div>
+
+  <h2>How it decides when to ring</h2>
+  <ul>
+    <li><strong>Live operator data first.</strong> The expected arrival at your stop comes from the operator's realtime feed where one is open. Sources, in order of trust for each country: the operator or infrastructure manager through the backend (ÖBB Scotty for Austria, the RFI arrival boards for Italy, MÁV for Hungary), then <a href="https://transitous.org/" target="_blank" rel="noopener">Transitous</a>, an open routing service that aggregates the open GTFS-RT feeds of Europe.</li>
+    <li><strong>GPS as the fallback.</strong> Where no live data exists, or when live data looks stale, the phone's position is projected onto the route and the timetable is interpolated: if you are where the train should have been 40 minutes ago, the arrival is 40 minutes late. Position never leaves the phone.</li>
+    <li><strong>Sparse polling.</strong> Live data is re-read every 30 minutes while the alarm is more than 6 hours away, every 15 minutes above 3 hours, every 10 minutes above 1 hour and every minute in the last hour.</li>
+    <li><strong>Server alarm for the locked screen.</strong> A browser page cannot run while the phone is locked, so the armed alarm is also stored on a small server that re-evaluates the arrival on the same cadence and sends push notifications at alarm time, every minute until you tap "I'm awake". Cancelled stops trigger an immediate alarm.</li>
+  </ul>
+
+  <h2>Coverage: live delays for long-distance trains</h2>
+  <p class="muted">Checked against real arrival boards in October 2026. Timetables are available everywhere; this map is about <em>live delays</em>. A dot marks countries served through the backend rather than an open feed.</p>
+  <div class="map" aria-label="Tile map of Europe coloured by live-data coverage">
+    <div class="tile full" style="grid-column:5;grid-row:1" title="Norway: Entur, live">NO</div>
+    <div class="tile none" style="grid-column:6;grid-row:1" title="Sweden: no open realtime (Trafikverket needs an API key)">SE</div>
+    <div class="tile partial" style="grid-column:7;grid-row:1" title="Finland: Digitraffic feed, partial">FI</div>
+    <div class="tile full" style="grid-column:1;grid-row:2" title="Ireland: TFI feed">IE</div>
+    <div class="tile full" style="grid-column:2;grid-row:2" title="Great Britain: Network Rail feed">GB</div>
+    <div class="tile none" style="grid-column:5;grid-row:2" title="Denmark: no open realtime (Rejseplanen needs an API key)">DK</div>
+    <div class="tile partial" style="grid-column:7;grid-row:2" title="Estonia: Elron">EE</div>
+    <div class="tile partial" style="grid-column:8;grid-row:2" title="Latvia: partial">LV</div>
+    <div class="tile full" style="grid-column:2;grid-row:3" title="Belgium: SNCB, live">BE</div>
+    <div class="tile full" style="grid-column:3;grid-row:3" title="Netherlands: NS via OpenOV, live">NL</div>
+    <div class="tile full" style="grid-column:4;grid-row:3" title="Germany: DB long-distance and regional (DELFI), live">DE</div>
+    <div class="tile full" style="grid-column:5;grid-row:3" title="Poland: PKP Intercity, live">PL</div>
+    <div class="tile partial" style="grid-column:6;grid-row:3" title="Lithuania: partial">LT</div>
+    <div class="tile full" style="grid-column:2;grid-row:4" title="France: SNCF (TGV, Intercités, TER), live">FR</div>
+    <div class="tile partial" style="grid-column:3;grid-row:4" title="Luxembourg: partial">LU</div>
+    <div class="tile full" style="grid-column:4;grid-row:4" title="Switzerland: all operators (opentransportdata.swiss), live">CH</div>
+    <div class="tile partial" style="grid-column:5;grid-row:4" title="Czechia: partial">CZ</div>
+    <div class="tile partial" style="grid-column:6;grid-row:4" title="Slovakia: ZSR feed, partial">SK</div>
+    <div class="tile full" style="grid-column:0;grid-row:5;grid-column-start:1" title="Portugal: CP feed">PT</div>
+    <div class="tile partial" style="grid-column:2;grid-row:5" title="Spain: Cercanías only, no long-distance realtime">ES</div>
+    <div class="tile full ext" style="grid-column:3;grid-row:5" title="Italy: RFI arrival boards via the backend, delay at your destination for every train">IT</div>
+    <div class="tile full ext" style="grid-column:4;grid-row:5" title="Austria: ÖBB, WESTbahn, private railways via the backend (ÖBB Scotty), live">AT</div>
+    <div class="tile partial ext" style="grid-column:5;grid-row:5" title="Hungary: MÁV via the backend, train delay and position only">HU</div>
+    <div class="tile partial" style="grid-column:6;grid-row:5" title="Romania: partial">RO</div>
+    <div class="tile partial" style="grid-column:3;grid-row:6" title="Slovenia: partial">SI</div>
+    <div class="tile partial" style="grid-column:4;grid-row:6" title="Croatia: HŽ feed, partial">HR</div>
+    <div class="tile partial" style="grid-column:5;grid-row:6" title="Serbia: Srbijavoz feed, partial">RS</div>
+    <div class="tile partial" style="grid-column:6;grid-row:6" title="Bulgaria: BDŽ feed, partial">BG</div>
+    <div class="tile partial" style="grid-column:5;grid-row:7" title="Greece: Hellenic Train feed, partial">GR</div>
+  </div>
+  <div class="legend"><span><i style="background:var(--ok)"></i>live delays normally available</span><span><i style="background:var(--warn)"></i>partial: some operators or regions</span><span><i style="background:var(--bad)"></i>no open realtime, GPS estimate carries the alarm</span></div>
+
+  <table style="margin-top:16px">
+    <thead><tr><th>Country</th><th>Live delays</th><th>Source</th></tr></thead>
+    <tbody>
+      <tr><td>Austria</td><td><span class="tag ok">live</span></td><td>ÖBB Scotty via backend: ÖBB, WESTbahn, GySEV, private railways, cross-border trains</td></tr>
+      <tr><td>Germany</td><td><span class="tag ok">live</span></td><td>DELFI GTFS-RT (DB long-distance and regional) via Transitous; also ÖBB Scotty</td></tr>
+      <tr><td>Switzerland</td><td><span class="tag ok">live</span></td><td>opentransportdata.swiss via Transitous; also ÖBB Scotty</td></tr>
+      <tr><td>Italy</td><td><span class="tag ok">live</span></td><td>RFI arrival boards (iechub.rfi.it) via backend: every train (Trenitalia, Italo, regional operators) with its current delay at your destination; appears on the board a few hours before arrival</td></tr>
+      <tr><td>France</td><td><span class="tag ok">live</span></td><td>SNCF GTFS-RT (TGV INOUI/OUIGO, Intercités, TER) via Transitous</td></tr>
+      <tr><td>Netherlands, Belgium</td><td><span class="tag ok">live</span></td><td>OpenOV (NS), SNCB via Transitous</td></tr>
+      <tr><td>Poland</td><td><span class="tag ok">live</span></td><td>PKP Intercity via Transitous</td></tr>
+      <tr><td>Norway, Great Britain, Ireland, Portugal</td><td><span class="tag ok">live</span></td><td>Entur, Network Rail, TFI, CP feeds via Transitous</td></tr>
+      <tr><td>Hungary</td><td><span class="tag warn">partial</span></td><td>MÁV Vonatinfo via backend: current delay and position of the train, no stop list</td></tr>
+      <tr><td>Czechia, Slovakia, Slovenia, Croatia, Luxembourg, Finland, Romania, Serbia, Bulgaria, Greece, Baltics</td><td><span class="tag warn">partial</span></td><td>Feeds exist on Transitous but cover only some operators or regions</td></tr>
+      <tr><td>Spain</td><td><span class="tag warn">partial</span></td><td>Renfe Cercanías only; no open realtime for long-distance trains</td></tr>
+      <tr><td>Denmark, Sweden</td><td><span class="tag bad">none</span></td><td>Rejseplanen and Trafikverket offer realtime only with a registered API key; not connected yet. GPS estimate takes over.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Limits you should know</h2>
+  <ul>
+    <li><strong>Foreground without the server alarm.</strong> Keep the app open with the screen on (it holds a wake lock; dim the screen and put the phone face down on the charger). With the server alarm, push notifications reach a locked phone, but <strong>Do Not Disturb or Sleep Focus silences them</strong>: switch it off or allow the browser / the home-screen app through. On iPhone, push works only for the home-screen app (iOS 16.4+).</li>
+    <li><strong>No signal, no update.</strong> Tunnels and dead zones freeze the data; the last known times stay in force and the warning turns red after 15 minutes. The GPS estimate keeps working with the last fix.</li>
+    <li><strong>Test it once at home.</strong> Arm a train that arrives soon, use "Test push", lock the phone, check the notification arrives.</li>
+  </ul>
+
+  <h2>Data and privacy</h2>
+  <ul>
+    <li>Station and train searches go to Transitous and, where it applies, to the backend. The backend forwards them to ÖBB, Trenitalia or MÁV.</li>
+    <li>With the server alarm on, the backend stores your train, stop, lead time and the push subscription of your browser until a few hours after arrival, then deletes them.</li>
+    <li>Your position is used only on the phone for the GPS estimate and is never sent anywhere.</li>
+    <li>Everything is open source (MIT): <a href="https://github.com/anna7br/side-quests/tree/main/arrive-awake" target="_blank" rel="noopener">github.com/anna7br/side-quests</a>.</li>
+  </ul>
+
+  <h2>Kurzfassung auf Deutsch</h2>
+  <div class="de">
+    <p>Arrive Awake weckt dich eine wählbare Zeit vor der <strong>tatsächlichen, verspätungsbereinigten Ankunft</strong> deines Zuges, nicht zu einer festen Uhrzeit. Zielbahnhof wählen, Zug wählen, Vorlauf einstellen, scharf stellen.</p>
+    <p>Die erwartete Ankunft kommt aus Echtzeitdaten der Betreiber: für Österreich, Italien und Ungarn über ein kleines Backend (ÖBB Scotty, RFI-Ankunftstafeln, MÁV Vonatinfo), sonst über Transitous (DB, SBB, SNCF, NS, SNCB, PKP und weitere). Wo es keine Echtzeit gibt, schätzt die App die Verspätung aus deiner GPS-Position auf der Strecke. Keine Echtzeit gibt es derzeit für Dänemark und Schweden, nur teilweise für Spanien, Tschechien, Slowakei und den Balkan.</p>
+    <p>Bei gesperrtem Bildschirm weckt dich der Server-Wecker per Push-Benachrichtigung; "Nicht stören" musst du dafür ausschalten oder dem Browser eine Ausnahme geben. Vorher einmal zu Hause mit "Test-Push" ausprobieren.</p>
+  </div>
+
+  <footer>Timetable and live data: Transitous (OpenStreetMap contributors and the agencies listed at transitous.org/sources), ÖBB Scotty, RFI arrival boards, MÁV Vonatinfo. Unofficial interfaces; the app keeps its request volume personal-scale.</footer>
+</div>
+</body>
+</html>

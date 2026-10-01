@@ -19,7 +19,7 @@ Expected arrival is taken from, in order of trust:
 | Source | Covers | Notes |
 |---|---|---|
 | **Transitous** (api.transitous.org, MOTIS) | Timetables for all of Europe; live delays where operators publish GTFS-RT: DB long-distance and regional (Germany, DELFI feed), SBB/all Swiss operators, Flix, many others. Nightjets running through Germany or Switzerland carry live data for their whole run. | Free, no key, CORS open. Non-commercial, open-source use only; identify yourself (footer attribution). Best effort, no SLA. |
-| **ÖBB Scotty via your own backend** (`proxy/`) | Live delays for every operator in Austria (ÖBB, WESTbahn, GySEV/Raaberbahn, private railways) and most cross-border trains. | ÖBB publishes no open realtime feed; the ÖBB app backend (HAFAS) does answer, but browsers cannot call it directly, so a small Cloudflare Worker forwards three read-only requests. Unofficial API – keep volume personal. |
+| **Backend sources** (`proxy/`, Cloudflare Worker) | **ÖBB Scotty**: every operator in Austria (ÖBB, WESTbahn, GySEV/Raaberbahn, private railways), German and Swiss stations, most cross-border trains. **RFI arrival boards** (iechub.rfi.it): every train in Italy with its delay at the destination (Trenitalia's own ViaggiaTreno API refuses Cloudflare addresses). **MÁV Vonatinfo**: current delay and position of every train in Hungary (no stop list). | None of these operators publishes an open realtime feed, but their app backends answer; browsers cannot call them directly (no CORS), so the Worker forwards read-only requests under `/oebb/…`, `/it/…`, `/hu/…`. Unofficial APIs – keep volume personal. |
 | **GPS estimate** (optional, on-device) | Anywhere | Projects the phone position onto the route and interpolates the timetable, giving a delay estimate when no live data exists or when live data looks stale. Position is never sent anywhere. |
 
 If GPS and live data disagree by 5 min or more, GPS wins and the screen says so. Cancellation of your stop triggers an immediate alarm.
@@ -74,11 +74,11 @@ Without the backend the app still works with Transitous live data and GPS, but o
 
   | Live delays for long-distance trains | Countries |
   |---|---|
-  | normally available | Austria (via the ÖBB backend), Germany, Switzerland, France (SNCF), Netherlands, Belgium, Poland (PKP Intercity), Norway, Great Britain, Ireland, Portugal |
-  | partial (some operators / regions) | Luxembourg, Slovenia, Croatia, Slovakia, Czechia, Finland, Romania, Serbia, Bulgaria, Greece, Baltics, Spain (Cercanías only) |
-  | no open realtime | Italy, Denmark, Sweden, Hungary |
+  | normally available | Austria (ÖBB backend), Italy (RFI boards via backend), Germany, Switzerland, France (SNCF), Netherlands, Belgium, Poland (PKP Intercity), Norway, Great Britain, Ireland, Portugal |
+  | partial (some operators / regions) | Hungary (MÁV backend: delay and position only), Luxembourg, Slovenia, Croatia, Slovakia, Czechia, Finland, Romania, Serbia, Bulgaria, Greece, Baltics, Spain (Cercanías only) |
+  | no open realtime | Denmark, Sweden (Rejseplanen and Trafikverket require a registered API key; not connected yet) |
 
-  The app shows this when you pick a station; the train list marks trains that currently carry live data with a green badge, and the armed screen shows the source. Where there is none, the GPS estimate carries the alarm, so keep GPS enabled. The ÖBB backend also returns live data for German and Swiss stations, but not for Italian, Czech or Hungarian ones.
+  The app shows this when you pick a station; the train list marks trains that currently carry live data with a green badge, and the armed screen shows the source. Where there is none, the GPS estimate carries the alarm, so keep GPS enabled. [about.html](about.html) has the full map and table. bahn.de's API (which would add DSB and others) blocks third-party clients, so it is not an option.
 - **Times are shown in the station's local time zone.** The ÖBB proxy assumes Europe/Vienna for board queries; stations in other time zones may be off by the zone difference in the train-matching step; the live stop times themselves are correct.
 - **Train matching between feeds** uses train number and scheduled arrival. Coupled trains (two numbers, one physical train) are grouped on purpose.
 
@@ -86,6 +86,7 @@ Without the backend the app still works with Transitous live data and GPS, but o
 
 ```
 index.html             app (single file: UI, i18n, logic)
+about.html             what it does, how it decides, coverage map and table
 manifest.webmanifest   PWA manifest
 sw.js                  service worker (app shell cache, push notifications)
 icon.svg, icon-*.png   icons

@@ -154,9 +154,12 @@ footer a{color:inherit}
       <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#0b0c10" stroke="#f2a93b" stroke-width="3"/><path d="M38 14a16 16 0 1 0 12 26 13 13 0 0 1-12-26z" fill="#f2a93b"/><rect x="14" y="40" width="22" height="12" rx="3" fill="#ece8dc"/><circle cx="19" cy="55" r="2.5" fill="#ece8dc"/><circle cx="31" cy="55" r="2.5" fill="#ece8dc"/></svg>
       <div><h1>Arrive Awake</h1><small data-i18n="tagline"></small></div>
     </div>
-    <div class="lang" role="group" aria-label="Language">
-      <button type="button" data-lang="en" aria-pressed="true">EN</button>
-      <button type="button" data-lang="de" aria-pressed="false">DE</button>
+    <div class="row" style="gap:8px">
+      <a class="pill" href="about.html" style="text-decoration:none;padding:7px 10px;font-size:12px" data-i18n="about">About</a>
+      <div class="lang" role="group" aria-label="Language">
+        <button type="button" data-lang="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang="de" aria-pressed="false">DE</button>
+      </div>
     </div>
   </header>
 
@@ -263,7 +266,7 @@ footer a{color:inherit}
 /* ---------- i18n ---------- */
 const STR = {
   en: {
-    tagline: 'An alarm that moves with your train.',
+    tagline: 'An alarm that moves with your train.', about: 'About & coverage',
     step_station: '1 · Where do you get off?',
     dest_label: 'Destination station', dest_ph: 'e.g. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Which train?', arr_label: 'Planned arrival (about)', ld_only: 'Long-distance only',
@@ -290,9 +293,9 @@ const STR = {
     foot_bg: 'This is a web app, not a system alarm: keep it in the foreground with the screen on. Night-train tip: install it to your home screen and put the phone on the charger.',
     pick_station: 'Pick a station from the list first.', err_net: 'Request failed: {e}',
     cancelled: 'cancelled', tz_note: 'Times shown in the station’s local time ({tz}).',
-    adv_title: 'Live data for Austria (ÖBB, WESTbahn, private railways)',
-    proxy_label: 'Your proxy URL', proxy_help: 'ÖBB publishes no open live feed. Deploy the small proxy from the proxy/ folder (free Cloudflare Worker) and paste its URL here. It reads live delays from the ÖBB Scotty backend for every operator in Austria and most cross-border trains.',
-    oebb_found: 'ÖBB live: train found ({n})', oebb_notfound: 'ÖBB live: train not found at this station', oebb_off: 'ÖBB live: no proxy configured', oebb_err: 'ÖBB live: proxy error ({e})',
+    adv_title: 'Backend: extra live data (Austria, Italy, Hungary) and server alarm',
+    proxy_label: 'Backend URL', proxy_help: 'A small server (Cloudflare Worker, see proxy/ in the repository) adds live sources that browsers cannot reach directly: ÖBB Scotty for Austria and cross-border trains, the RFI arrival boards for Italy, MÁV Vonatinfo for Hungary. It also runs the server alarm. The default is the public instance; you can point it at your own.',
+    ext_found: 'Extra live sources: {n}', ext_none: 'Extra live sources: none found for this train', ext_off: 'Extra live sources: no backend URL set', ext_err: 'Extra live sources: {e}',
     live_src: 'Live data · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
     cov_full: 'Live delays for {c}: available for long-distance trains.', cov_partial: 'Live delays for {c}: only some operators publish them; otherwise the GPS estimate takes over.', cov_none: 'Live delays for {c}: no open data. The alarm will rely on the timetable and the GPS estimate, so keep GPS on.', cov_unknown: 'Live delays for {c}: unknown coverage; the train list shows a green badge where live data exists.',
     opt_push: 'Server alarm when the screen is locked', opt_push_s: 'Your proxy server keeps watching the train and sends push notifications at alarm time, even while this page is frozen. Needs the proxy URL; on iPhone the app must be installed to the home screen.',
@@ -300,7 +303,7 @@ const STR = {
     push_active: 'Server alarm active', push_pending: 'Registering server alarm…', push_err: 'Server alarm failed: {e}', push_test: 'Test push', push_test_ok: 'Test notification sent. Lock the phone and check that it arrived.', push_test_fail: 'Test push failed: {e}'
   },
   de: {
-    tagline: 'Ein Wecker, der mit dem Zug mitfährt.',
+    tagline: 'Ein Wecker, der mit dem Zug mitfährt.', about: 'Infos & Abdeckung',
     step_station: '1 · Wo steigst du aus?',
     dest_label: 'Zielbahnhof', dest_ph: 'z. B. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Welcher Zug?', arr_label: 'Geplante Ankunft (ungefähr)', ld_only: 'Nur Fernverkehr',
@@ -327,9 +330,9 @@ const STR = {
     foot_bg: 'Das ist eine Web-App, kein System-Wecker: im Vordergrund lassen, Bildschirm an. Nachtzug-Tipp: zum Homescreen hinzufügen und das Handy ans Ladekabel hängen.',
     pick_station: 'Bitte zuerst einen Bahnhof aus der Liste wählen.', err_net: 'Anfrage fehlgeschlagen: {e}',
     cancelled: 'fällt aus', tz_note: 'Zeiten in Ortszeit des Bahnhofs ({tz}).',
-    adv_title: 'Echtzeit für Österreich (ÖBB, WESTbahn, Privatbahnen)',
-    proxy_label: 'Deine Proxy-URL', proxy_help: 'Die ÖBB veröffentlichen keine offenen Echtzeitdaten. Den kleinen Proxy aus dem Ordner proxy/ (kostenloser Cloudflare Worker) ausrollen und die URL hier eintragen. Er liest Verspätungen aus dem ÖBB-Scotty-Backend für alle Betreiber in Österreich und die meisten grenzüberschreitenden Züge.',
-    oebb_found: 'ÖBB live: Zug gefunden ({n})', oebb_notfound: 'ÖBB live: Zug an diesem Bahnhof nicht gefunden', oebb_off: 'ÖBB live: kein Proxy eingetragen', oebb_err: 'ÖBB live: Proxy-Fehler ({e})',
+    adv_title: 'Backend: zusätzliche Echtzeit (Österreich, Italien, Ungarn) und Server-Wecker',
+    proxy_label: 'Backend-URL', proxy_help: 'Ein kleiner Server (Cloudflare Worker, siehe proxy/ im Repository) ergänzt Quellen, die Browser nicht direkt erreichen: ÖBB Scotty für Österreich und grenzüberschreitende Züge, die RFI-Ankunftstafeln für Italien, MÁV Vonatinfo für Ungarn. Er betreibt auch den Server-Wecker. Voreingestellt ist die öffentliche Instanz, du kannst auf eine eigene zeigen.',
+    ext_found: 'Zusätzliche Echtzeitquellen: {n}', ext_none: 'Zusätzliche Echtzeitquellen: keine für diesen Zug gefunden', ext_off: 'Zusätzliche Echtzeitquellen: keine Backend-URL eingetragen', ext_err: 'Zusätzliche Echtzeitquellen: {e}',
     live_src: 'Echtzeitdaten · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
     cov_full: 'Verspätungen live für {c}: für Fernzüge verfügbar.', cov_partial: 'Verspätungen live für {c}: nur manche Betreiber veröffentlichen sie; sonst übernimmt die GPS-Schätzung.', cov_none: 'Verspätungen live für {c}: keine offenen Daten. Der Wecker stützt sich auf Fahrplan und GPS-Schätzung, GPS also eingeschaltet lassen.', cov_unknown: 'Verspätungen live für {c}: Abdeckung unbekannt; in der Zugliste zeigt ein grünes Etikett, wo Echtzeit vorhanden ist.',
     opt_push: 'Server-Wecker bei gesperrtem Bildschirm', opt_push_s: 'Dein Proxy-Server beobachtet den Zug weiter und schickt zur Weckzeit Push-Benachrichtigungen, auch wenn diese Seite eingefroren ist. Braucht die Proxy-URL; am iPhone muss die App zum Homescreen hinzugefügt sein.',
@@ -390,7 +393,7 @@ async function proxyApi(path, params, method='GET', body){
 /* ---------- server-side alarm via Web Push (see proxy/worker.js) ---------- */
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
 function b64ToU8(s){ const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'=')); return Uint8Array.from(b, c=>c.charCodeAt(0)); }
-function alarmBody(){ return { id: armed.alarmId, lead: armed.lead, lang, station: armed.station, scheduledArrival: armed.scheduledArrival, names: armed.names, from: armed.from, oebb: armed.oebb||null, snoozeUntil: armed.snoozeUntil||0,
+function alarmBody(){ return { id: armed.alarmId, lead: armed.lead, lang, station: armed.station, scheduledArrival: armed.scheduledArrival, names: armed.names, from: armed.from, ext: (armed.ext||[]).map(e=>({src:e.src, tripId:e.tripId, number:e.number, station:e.station})), snoozeUntil: armed.snoozeUntil||0,
   members: armed.members.map(m=>({tripId:m.tripId, stopId:m.stopId, parentId:m.parentId, scheduledArrival:m.scheduledArrival, name:m.name})) }; }
 async function setupPush(){
   if(!armed || !armed.opts.push || !proxyUrl) return;
@@ -409,31 +412,62 @@ async function setupPush(){
   renderArmed();
 }
 function pushCall(path, params){ if(armed?.alarmId && proxyUrl) return proxyApi(path, {id:armed.alarmId, ...params}, path==='alarm' ? 'DELETE' : 'POST').catch(()=>{}); }
-/* Find the same train in the ÖBB system: stations near the chosen one, then an arrival with the same train number / time. */
-async function resolveOebb(ctx){
-  if(!proxyUrl) return null;
-  const locs = await proxyApi('locations', {q: ctx.station.name});
-  let cands = locs.filter(l=> distKm(l, ctx.station) < 1.5).slice(0,3);
-  if(!cands.length && locs.length) cands = [locs[0]];
+/* Extra live sources served by the backend (proxy/worker.js). Each is tried where it applies; the same train is found
+   by station (near the chosen one) plus train number / scheduled arrival, then polled alongside Transitous. */
+const EXT_SOURCES = {
+  oebb: { label:'ÖBB Scotty',        applies: s => true,                  kind:'trip'  },   // AT + DE/CH stations + many cross-border trains
+  it:   { label:'RFI arrival board', applies: s => s?.country==='IT',     kind:'delay' },   // delay at the destination, appears a few hours before arrival
+  hu:   { label:'MÁV Vonatinfo',     applies: s => s?.country==='HU',     kind:'delay' },   // delay + position only
+};
+const srcLabel = src => EXT_SOURCES[src]?.label || t('src_transitous');
+const hasCoords = s => Number.isFinite(s.lat) && Number.isFinite(s.lon);
+async function resolveExt(ctx){
+  const found=[], errors=[];
+  if(!proxyUrl) return {found, errors};
   const nums = new Set(ctx.names.map(digits).filter(Boolean));
-  for(const l of cands){
-    const arr = await proxyApi('arrivals', {station:l.id, when:new Date(new Date(ctx.scheduledArrival).getTime()-30*60000).toISOString(), duration:90});
-    const hit = arr.find(a=> Math.abs(minsDiff(a.scheduledArrival, ctx.scheduledArrival))<=1 && (nums.has(String(a.number)) || nums.has(digits(a.name)) || (ctx.from && norm(a.origin)===norm(ctx.from))));
-    if(hit) return {tripId:hit.tripId, stationId:l.id, name:hit.name};
+  const when = new Date(new Date(ctx.scheduledArrival).getTime()-30*60000).toISOString();
+  for(const [src, def] of Object.entries(EXT_SOURCES)){
+    if(!def.applies(ctx.station)) continue;
+    try{
+      const n=[...nums][0];
+      if(src==='hu'){ if(n){ const d=await proxyApi('hu/delay', {number:n}); if(d.found) found.push({src, number:n, name:d.name}); } continue; }
+      if(src==='it'){
+        // the RFI board only lists trains a few hours ahead, so remember station + number now and look the delay up at every poll
+        if(!n) continue;
+        const locs = await proxyApi('it/locations', {q: ctx.station.name.split(/[\s(/-]/)[0]});
+        const target = norm(ctx.station.name).replace(/santa/g,'s').replace(/san/g,'s');
+        const l = locs.find(x=> norm(x.name)===norm(ctx.station.name)) || locs.find(x=> norm(x.name).replace(/santa/g,'s').replace(/san/g,'s')===target) || locs.find(x=> norm(x.name).startsWith(norm(ctx.station.name).slice(0,6))) || locs[0];
+        if(l){ const d = await proxyApi('it/delay', {station:l.id, number:n}).catch(()=>({found:false})); found.push({src, station:l.id, number:n, name:(d.found ? d.name : n)+' @ '+l.name}); }
+        continue;
+      }
+      const locs = await proxyApi(src+'/locations', {q: ctx.station.name});
+      let cands = locs.filter(l=> distKm(l, ctx.station) < 1.5).slice(0,3);
+      if(!cands.length) cands = locs.filter(l=> norm(l.name).startsWith(norm(ctx.station.name).slice(0,5))).slice(0,4);
+      if(!cands.length && locs.length) cands=[locs[0]];
+      for(const l of cands){
+        const arr = await proxyApi(src+'/arrivals', {station:l.id, when, duration:90});
+        const hit = arr.find(a=> Math.abs(minsDiff(a.scheduledArrival, ctx.scheduledArrival))<=2 && (nums.has(String(a.number)) || nums.has(digits(a.name)) || (ctx.from && norm(a.origin)===norm(ctx.from))));
+        if(hit){ found.push({src, tripId:hit.tripId, stationId:l.id, name:hit.name}); break; }
+      }
+    }catch(e){ errors.push(def.label+': '+e.message); }
   }
-  return null;
+  return {found, errors};
 }
-function oebbInfo(td, ctx){
+function extInfo(td, ctx, src){
   const stops = (td.stops||[]).map(s=>({name:s.name, stopId:s.id, lat:s.lat, lon:s.lon, schedArr:s.schedArr, realArr:s.realArr, schedDep:s.schedDep, realDep:s.realDep, cancelled:!!s.cancelled}));
   let idx = stops.findIndex(s=> s.schedArr && Math.abs(minsDiff(s.schedArr, ctx.scheduledArrival))<=1 && distKm(s, ctx.station)<2);
   if(idx<0) idx = stops.findIndex(s=> s.schedArr && Math.abs(minsDiff(s.schedArr, ctx.scheduledArrival))<=1);
   if(idx<0) return null;
   const dest=stops[idx];
-  return { source:'oebb', stops, destIdx:idx, name:td.name, realTime:!!td.realTime, cancelled:!!(td.cancelled||dest.cancelled), schedArr:dest.schedArr, realArr:dest.realArr||dest.schedArr };
+  return { source:src, stops, destIdx:idx, name:td.name, realTime:!!td.realTime, cancelled:!!(td.cancelled||dest.cancelled), schedArr:dest.schedArr, realArr:dest.realArr||dest.schedArr };
+}
+function delayInfo(d, ctx, src){      // sources that only know the train's current delay (RFI board, MÁV)
+  if(!d || !d.found) return null;
+  return { source:src, stops:[], destIdx:-1, name:d.name, realTime:d.realTime!==false, cancelled:!!d.cancelled, schedArr:ctx.scheduledArrival, realArr:new Date(new Date(ctx.scheduledArrival).getTime()+(d.delay||0)*60000).toISOString(), delay:d.delay, position:{lat:d.lat, lon:d.lon} };
 }
 
 /* ---------- state ---------- */
-const state = { station:null, groups:[], selected:null, cursors:{}, tripPreview:null };
+const state = { station:null, groups:[], selected:null, shiftH:0, tripPreview:null };
 let armed = null;          // persisted armed configuration
 let live = null;           // last computed live info
 let pollTimer = null, tickTimer = null, wakeLock = null, geoWatch = null, gps = null, lastFetchOk = 0, lastFetchErr = null, ringing=false, snoozeUntil=0, rangTripArrival=false;
@@ -450,11 +484,16 @@ async function searchStations(q){
   const ul=$('station-results'); ul.innerHTML = `<li class="muted" style="padding:6px 2px">${t('searching')}</li>`;
   try{
     const res = await api('geocode', {text:q, type:'STOP', language:lang});
-    const seen=new Set(); const items=[];
+    // The same station appears once per data feed (e.g. "Venezia Santa Lucia" from the Austrian feed and "VENEZIA S.LUCIA" from
+    // Trenitalia's) and the feeds are not always merged. Cluster results within 500 m, prefer the entry from the station's own
+    // country feed for the name, and remember all ids so the train search can query every one of them.
+    const items=[];
     for(const r of res){
       if(!(r.modes||[]).some(m=>RAIL_SET.has(m))) continue;
-      const key=norm(r.name)+'|'+(r.country||''); if(seen.has(key)) continue; seen.add(key);
-      items.push(r); if(items.length>=8) break;
+      const c = items.find(x=> distKm(x, r) < 0.5 && x.country===r.country);
+      if(c){ c.ids.push(r.id); if(!c.local && r.country && r.id.toLowerCase().startsWith(r.country.toLowerCase()+'-')){ c.local=true; c.name=r.name; c.id=r.id; } continue; }
+      items.push({...r, ids:[r.id], local: !!(r.country && r.id.toLowerCase().startsWith(r.country.toLowerCase()+'-'))});
+      if(items.length>=8) break;
     }
     ul.innerHTML = items.length ? '' : `<li class="muted" style="padding:6px 2px">${t('no_trains')}</li>`;
     items.forEach(r=>{
@@ -467,7 +506,7 @@ async function searchStations(q){
   }catch(e){ ul.innerHTML = `<li class="msg bad">${escapeHtml(t('err_net',{e:e.message}))}</li>`; }
 }
 function pickStation(r){
-  state.station = {id:r.id, name:r.name, tz:r.tz, country:r.country, lat:r.lat, lon:r.lon};
+  state.station = {id:r.id, ids:(r.ids||[r.id]).slice(0,4), name:r.name, tz:r.tz, country:r.country, lat:r.lat, lon:r.lon};
   $('station-results').innerHTML=''; $('station-q').value=r.name; showStationPicked();
   $('step-time').hidden=false; $('step-alarm').hidden=true; state.groups=[]; state.selected=null; renderTrains();
   if(!$('arr-when').value){ const d=new Date(); d.setSeconds(0,0); if(d.getHours()>=14){ d.setDate(d.getDate()+1); d.setHours(6,30,0,0);} $('arr-when').value = toLocalInputValue(d); }
@@ -475,26 +514,28 @@ function pickStation(r){
 }
 /* Open live-data coverage for long-distance rail, checked October 2026 (Transitous GTFS-RT feeds + ÖBB backend for AT).
    full: delays normally present · partial: some operators only · none: no open realtime, GPS estimate carries the alarm */
-const COVERAGE = { full:['AT','DE','CH','FR','NL','BE','PL','NO','GB','IE','PT'], partial:['LU','SI','HR','SK','CZ','FI','RO','RS','BG','GR','EE','LT','LV','ES'], none:['IT','DK','SE','HU'] };
+const COVERAGE = { full:['AT','DE','CH','FR','NL','BE','PL','NO','GB','IE','PT','IT'], partial:['LU','SI','HR','SK','CZ','FI','RO','RS','BG','GR','EE','LT','LV','ES','HU'], none:['DK','SE'] };
 function coverageOf(cc){ for(const k of ['full','partial','none']) if(COVERAGE[k].includes(cc)) return k; return 'unknown'; }
 function countryName(cc){ try{ return new Intl.DisplayNames([locale()], {type:'region'}).of(cc); }catch(e){ return cc; } }
 function showStationPicked(){ const s=state.station; const cov = s.country ? coverageOf(s.country) : 'unknown'; $('station-picked').hidden=false; $('station-picked').innerHTML = `<b>${escapeHtml(s.name)}</b> <span class="muted mono">${escapeHtml(s.country||'')}</span><br><span class="muted">${escapeHtml(t('tz_note',{tz:s.tz||'local'}))}</span><br><span class="${cov==='full'?'ok-txt':cov==='none'?'warn-txt':'muted'}">${escapeHtml(t('cov_'+cov,{c: s.country ? countryName(s.country) : '?'}))}</span>`; }
 
 /* ---------- train search ---------- */
-$('btn-find').addEventListener('click', ()=> findTrains());
-$('btn-later').addEventListener('click', ()=> findTrains(state.cursors.next));
-$('btn-earlier').addEventListener('click', ()=> findTrains(state.cursors.prev));
-async function findTrains(cursor){
+$('btn-find').addEventListener('click', ()=> findTrains(0));
+$('btn-later').addEventListener('click', ()=> findTrains(state.shiftH + 3));
+$('btn-earlier').addEventListener('click', ()=> findTrains(state.shiftH - 3));
+async function findTrains(shiftH){
   if(!state.station){ $('trains-msg').hidden=false; $('trains-msg').textContent=t('pick_station'); return; }
   const whenVal=$('arr-when').value; const when = whenVal ? new Date(whenVal) : new Date();
   const modes = $('opt-ld').checked ? LD_MODES : ALL_MODES;
+  state.shiftH = shiftH||0;
   $('trains-msg').hidden=false; $('trains-msg').className='msg'; $('trains-msg').textContent=t('loading'); $('train-more').hidden=true;
   try{
-    const params = {stopId: state.station.id, arriveBy:'true', n: 25, mode: modes};
-    if(cursor) params.pageCursor = cursor; else { params.time = new Date(when.getTime()-40*60000).toISOString(); params.direction='LATER'; }
-    const res = await api('stoptimes', params);
-    state.cursors = {next: res.nextPageCursor, prev: res.previousPageCursor};
-    state.groups = groupTrains(res.stopTimes||[]);
+    const start = new Date(when.getTime() + state.shiftH*3600e3 - 40*60000);
+    // one query per data-feed stop of this station (see searchStations), merged; a 3.5 h window keeps the list comparable across stops
+    const lists = await Promise.all((state.station.ids||[state.station.id]).map(id=> api('stoptimes', {stopId:id, arriveBy:'true', n:25, mode:modes, time:start.toISOString(), direction:'LATER'}).then(r=> r.stopTimes||[]).catch(()=>[])));
+    const end = start.getTime() + 3.5*3600e3;
+    const all = lists.flat().filter(s=> { const a=new Date(s.place.scheduledArrival||s.place.scheduledDeparture).getTime(); return lists.length===1 || a <= end; });
+    state.groups = groupTrains(all);
     state.selected=null; $('step-alarm').hidden=true;
     $('trains-msg').hidden = state.groups.length>0; $('trains-msg').textContent = t('no_trains');
     $('train-more').hidden = false;
@@ -534,7 +575,7 @@ function renderTrains(){
 async function selectTrain(g){
   state.selected=g; renderTrains(); $('step-alarm').hidden=false; $('arm-msg').hidden=true;
   $('trip-summary').textContent=t('loading'); $('trip-stops').innerHTML='';
-  try{ const ctx=ctxOf(g, state.station); lastOebbTry=0; state.tripPreview = await loadTripInfo(ctx); g.oebb=ctx.oebb; g.oebbStatus=ctx.oebbStatus; g.oebbError=ctx.oebbError; renderTripSummary(); }
+  try{ const ctx=ctxOf(g, state.station); lastExtTry=0; state.tripPreview = await loadTripInfo(ctx); g.ext=ctx.ext||[]; g.extErrors=ctx.extErrors||[]; renderTripSummary(); }
   catch(e){ state.tripPreview=null; $('trip-summary').textContent=t('arm_fail')+' ('+e.message+')'; }
   $('step-alarm').scrollIntoView({behavior:'smooth', block:'start'});
 }
@@ -542,8 +583,8 @@ function renderTripSummary(){
   if(!state.selected) return; const g=state.selected, info=state.tripPreview; const tz=g.tz||state.station?.tz;
   const names=[...g.names].join(' / ');
   let html = `<b>${escapeHtml(names)}</b> · ${escapeHtml(t('from_to',{a:g.from,b:g.to}))}<br>` + `<span class="muted">${escapeHtml(state.station.name)} · ${t('sched')} ${fmtTime(g.scheduledArrival,tz)} · ${fmtDate(g.scheduledArrival,tz)}</span>`;
-  if(info){ html += `<br><span class="${info.realTime?'ok-txt':'muted'}">${escapeHtml(info.realTime ? t('live_src',{s:t(info.source==='oebb'?'src_oebb':'src_transitous')}) : t('sched_only'))}</span>`; }
-  const os = !proxyUrl ? t('oebb_off') : g.oebbStatus==='found' ? t('oebb_found',{n:g.oebb?.name||''}) : g.oebbStatus==='error' ? t('oebb_err',{e:g.oebbError||''}) : g.oebbStatus==='notfound' ? t('oebb_notfound') : '';
+  if(info){ html += `<br><span class="${info.realTime?'ok-txt':'muted'}">${escapeHtml(info.realTime ? t('live_src',{s:srcLabel(info.source)}) : t('sched_only'))}</span>`; }
+  const os = !proxyUrl ? t('ext_off') : (g.ext||[]).length ? t('ext_found',{n:g.ext.map(e=> `${srcLabel(e.src)} (${e.name||''})`).join(', ')}) : (g.extErrors||[]).length ? t('ext_err',{e:g.extErrors[0]}) : t('ext_none');
   if(os) html += `<br><span class="muted">${escapeHtml(os)}</span>`;
   $('trip-summary').innerHTML = html;
   const ul=$('trip-stops'); ul.innerHTML='';
@@ -552,27 +593,35 @@ function renderTripSummary(){
 
 /* ---------- trip loading & ETA logic ---------- */
 /* ctx = {members, station, scheduledArrival, from, names, oebb} — shared by the preview (selected group) and the armed state */
-function ctxOf(g, station){ return {members:g.members, station, scheduledArrival:g.scheduledArrival, from:g.from, names:[...(g.names instanceof Set ? g.names : g.names||[])], oebb:g.oebb}; }
-let lastOebbTry = 0;
+function ctxOf(g, station){ return {members:g.members, station, scheduledArrival:g.scheduledArrival, from:g.from, names:[...(g.names instanceof Set ? g.names : g.names||[])], ext:g.ext||[]}; }
+let lastExtTry = 0;
+const PREFER_SRC = { AT:'oebb', IT:'it', HU:'hu' };
 async function loadTripInfo(ctx){
   const jobs = ctx.members.map(m=> api('trip', {tripId:m.tripId}).then(trip=> extractInfo(trip, m)));
-  // ÖBB proxy: resolve the train once (retry every 10 min while not found), then poll its journey details
+  // backend sources: find the train once (retry every 10 min while nothing was found), then poll what was found
   if(proxyUrl){
     jobs.push((async ()=>{
-      if(!ctx.oebb && Date.now()-lastOebbTry > 10*60e3){ lastOebbTry=Date.now(); ctx.oebbStatus='searching'; ctx.oebb = await resolveOebb(ctx); ctx.oebbStatus = ctx.oebb ? 'found' : 'notfound'; }
-      if(!ctx.oebb) return null;
-      const td = await proxyApi('trip', {id: ctx.oebb.tripId}); return oebbInfo(td, ctx);
-    })().catch(e=>{ ctx.oebbStatus='error'; ctx.oebbError=e.message; throw e; }));
+      if(!(ctx.ext||[]).length && Date.now()-lastExtTry > 10*60e3){ lastExtTry=Date.now(); const r = await resolveExt(ctx); ctx.ext = r.found; ctx.extErrors = r.errors; }
+      const results = await Promise.allSettled((ctx.ext||[]).map(e => EXT_SOURCES[e.src]?.kind==='delay'
+        ? proxyApi(e.src+'/delay', {number:e.number, station:e.station}).then(d=> delayInfo(d, ctx, e.src))
+        : proxyApi(e.src+'/trip', {id:e.tripId}).then(td=> extInfo(td, ctx, e.src))));
+      const errs = results.filter(r=> r.status==='rejected').map(r=> r.reason?.message); if(errs.length) ctx.extErrors = [...(ctx.extErrors||[]), ...errs];
+      return results.filter(r=> r.status==='fulfilled' && r.value).map(r=> r.value);
+    })());
   }
   const results = await Promise.allSettled(jobs);
   const infos=[]; let lastErr=null;
-  results.forEach(r=>{ if(r.status==='fulfilled'){ if(r.value) infos.push(r.value); } else lastErr=r.reason; });
+  results.forEach(r=>{ if(r.status==='fulfilled'){ if(Array.isArray(r.value)) infos.push(...r.value); else if(r.value) infos.push(r.value); } else lastErr=r.reason; });
   if(!infos.length) throw lastErr || new Error('no trip data');
-  const preferOebb = (ctx.station?.country||'') === 'AT';
-  const score = i => (i.realTime && !i.cancelled ? 4 : 0) + (!i.cancelled ? 2 : 0) + ((i.source==='oebb') === preferOebb ? 1 : 0);
+  const pref = PREFER_SRC[ctx.station?.country||''] || 'transitous';
+  const score = i => (i.realTime && !i.cancelled ? 4 : 0) + (!i.cancelled ? 2 : 0) + (i.source===pref ? 1 : 0);
   infos.sort((a,b)=> score(b)-score(a));
-  infos[0].alternatives = infos.slice(1);
-  return infos[0];
+  const best = infos[0];
+  best.alternatives = infos.slice(1);
+  // stop list with coordinates (for GPS and the position display) comes from Transitous when the best source has none
+  best.geo = best.stops.some(hasCoords) ? best : infos.find(i=> i.stops.some(hasCoords)) || best;
+  if(!best.stops.length && best.geo!==best){ best.stops = best.geo.stops; best.destIdx = best.geo.destIdx; }
+  return best;
 }
 function extractInfo(trip, m){
   const legs = (trip.legs||[]).filter(l=> l.tripId); if(!legs.length) return null;
@@ -622,7 +671,7 @@ function computeLive(info, now){
   let eta = info.realTime ? rtEta : schedEta, basis = info.realTime ? 'live' : 'schedule', note='';
   let g=null;
   if(armed?.opts?.gps && gps && gps.fix && (now - gps.fix.time) < 10*60000){
-    g = gpsEstimate(info, gps.fix, now);
+    g = gpsEstimate(info.geo||info, gps.fix, now);
     if(g && g.distKm>3){ g.ignored=true; }
     else if(g && g.ahead && g.remaining>0){
       const diff = minsDiff(g.eta, eta);
@@ -644,7 +693,7 @@ $('btn-arm').addEventListener('click', async ()=>{
   const wantPush = $('opt-push').checked && !$('opt-push').disabled;
   // permission prompts must stay inside the click gesture (iOS): ask first, unlock audio after
   if('Notification' in window && Notification.permission==='default'){ try{ await Notification.requestPermission(); }catch(e){} }
-  armed = { station: state.station, members: g.members, names:[...g.names], from:g.from, to:g.to, scheduledArrival:g.scheduledArrival, tz:g.tz||state.station.tz, lead:+$('lead').value, oebb:g.oebb||null,
+  armed = { station: state.station, members: g.members, names:[...g.names], from:g.from, to:g.to, scheduledArrival:g.scheduledArrival, tz:g.tz||state.station.tz, lead:+$('lead').value, ext:g.ext||[],
             opts:{wake:$('opt-wake').checked, gps:$('opt-gps').checked, audio:$('opt-audio').checked, vibrate:$('opt-vibrate').checked, push:wantPush}, armedAt:Date.now() };
   save();
   await unlockAudio();
@@ -705,9 +754,9 @@ function schedulePoll(delayMs){
 async function poll(){
   if(!armed) return;
   try{
-    const hadOebb = !!armed.oebb;
-    const info = await loadTripInfo(armed);     // armed has the same shape as ctx; a found ÖBB train is stored on it
-    if(!hadOebb && armed.oebb){ save(); if(armed.pushState==='active') setupPush(); }   // tell the server about the ÖBB match
+    const hadExt = (armed.ext||[]).length;
+    const info = await loadTripInfo(armed);     // armed has the same shape as ctx; newly found backend sources are stored on it
+    if(!hadExt && (armed.ext||[]).length){ save(); if(armed.pushState==='active') setupPush(); }   // tell the server about them
     live = {info}; lastFetchOk=Date.now(); lastFetchErr=null;
   }catch(e){ lastFetchErr=e; }
   tick();
@@ -762,7 +811,7 @@ function renderSrc(){
   const age = lastFetchOk ? Date.now()-lastFetchOk : null;
   const dotCls = !lastFetchOk ? 'warn' : age>15*60e3 ? 'bad' : (c?.basis==='live' ? 'ok' : 'warn');
   parts.push(`<span class="dot ${dotCls}"></span>`);
-  if(c) parts.push(`<span>${escapeHtml(c.basis==='live' ? t('live_src',{s:t(live.info.source==='oebb'?'src_oebb':'src_transitous')}) : c.basis==='gps' ? c.note : t('sched_only'))}</span>`);
+  if(c) parts.push(`<span>${escapeHtml(c.basis==='live' ? t('live_src',{s:srcLabel(live.info.source)}) : c.basis==='gps' ? c.note : t('sched_only'))}</span>`);
   parts.push(`<span class="mono">${escapeHtml(t('updated',{t: age===null ? t('never') : fmtDur(age)}))}</span>`);
   if(armed.opts.push){ const ps=armed.pushState; parts.push(`<span class="${ps==='active'?'ok-txt':ps==='error'?'bad-txt':''}">${escapeHtml(ps==='active' ? t('push_active') : ps==='error' ? t('push_err',{e:armed.pushError||''}) : t('push_pending'))}</span>`); }
   $('btn-push-test').hidden = !(armed.opts.push && armed.pushState==='active');
@@ -831,7 +880,7 @@ function stopGps(){ if(geoWatch!==null && navigator.geolocation) navigator.geolo
 (function init(){
   applyLang();
   $('proxy-url').value = proxyUrl;
-  $('proxy-url').addEventListener('change', e=>{ proxyUrl = e.target.value.trim().replace(/\/+$/,''); try{ proxyUrl ? localStorage.setItem('aa.proxy', proxyUrl) : localStorage.removeItem('aa.proxy'); }catch(err){} lastOebbTry=0; updatePushOption(); if(state.selected) selectTrain(state.selected); });
+  $('proxy-url').addEventListener('change', e=>{ proxyUrl = e.target.value.trim().replace(/\/+$/,''); try{ proxyUrl ? localStorage.setItem('aa.proxy', proxyUrl) : localStorage.removeItem('aa.proxy'); }catch(err){} lastExtTry=0; updatePushOption(); if(state.selected) selectTrain(state.selected); });
   if(proxyUrl) $('advanced').open = false;
   updatePushOption();
   try{ const s=localStorage.getItem('aa.armed'); if(s){ armed=JSON.parse(s); if(new Date(armed.scheduledArrival).getTime()+6*3600e3 > Date.now()){ state.station=armed.station; startArmed(null); if(armed.opts?.push && armed.pushState!=='active') setupPush(); } else { armed=null; save(); } } }catch(e){ armed=null; }
