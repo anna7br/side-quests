@@ -70,7 +70,15 @@ Without the backend the app still works with Transitous live data and GPS, but o
 
 - **Foreground only without the backend.** Keep the app in the foreground with the screen on (the app requests a wake lock; dim the screen manually and put the phone face down on the charger). The alarm sound plays through an `<audio>` element so the iOS mute switch does not silence it.
 - **No signal, no update.** In tunnels or dead zones the last known times are shown and the alarm still fires on them; the warning turns red after 15 minutes without fresh data. The GPS estimate keeps working with the last fix. The server alarm needs the phone to have *some* data connection at alarm time to receive the push.
-- **Transitous realtime coverage** depends on operators. Austria (outside Styria) has none without the backend. Check the dot and the source line on the armed screen: green = live data for this train.
+- **Live-data coverage** depends on what operators publish openly. Checked against real arrival boards in October 2026:
+
+  | Live delays for long-distance trains | Countries |
+  |---|---|
+  | normally available | Austria (via the ÖBB backend), Germany, Switzerland, France (SNCF), Netherlands, Belgium, Poland (PKP Intercity), Norway, Great Britain, Ireland, Portugal |
+  | partial (some operators / regions) | Luxembourg, Slovenia, Croatia, Slovakia, Czechia, Finland, Romania, Serbia, Bulgaria, Greece, Baltics, Spain (Cercanías only) |
+  | no open realtime | Italy, Denmark, Sweden, Hungary |
+
+  The app shows this when you pick a station; the train list marks trains that currently carry live data with a green badge, and the armed screen shows the source. Where there is none, the GPS estimate carries the alarm, so keep GPS enabled. The ÖBB backend also returns live data for German and Swiss stations, but not for Italian, Czech or Hungarian ones.
 - **Times are shown in the station's local time zone.** The ÖBB proxy assumes Europe/Vienna for board queries; stations in other time zones may be off by the zone difference in the train-matching step; the live stop times themselves are correct.
 - **Train matching between feeds** uses train number and scheduled arrival. Coupled trains (two numbers, one physical train) are grouped on purpose.
 

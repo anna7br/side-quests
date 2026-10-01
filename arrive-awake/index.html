@@ -294,6 +294,7 @@ const STR = {
     proxy_label: 'Your proxy URL', proxy_help: 'ÖBB publishes no open live feed. Deploy the small proxy from the proxy/ folder (free Cloudflare Worker) and paste its URL here. It reads live delays from the ÖBB Scotty backend for every operator in Austria and most cross-border trains.',
     oebb_found: 'ÖBB live: train found ({n})', oebb_notfound: 'ÖBB live: train not found at this station', oebb_off: 'ÖBB live: no proxy configured', oebb_err: 'ÖBB live: proxy error ({e})',
     live_src: 'Live data · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
+    cov_full: 'Live delays for {c}: available for long-distance trains.', cov_partial: 'Live delays for {c}: only some operators publish them; otherwise the GPS estimate takes over.', cov_none: 'Live delays for {c}: no open data. The alarm will rely on the timetable and the GPS estimate, so keep GPS on.', cov_unknown: 'Live delays for {c}: unknown coverage; the train list shows a green badge where live data exists.',
     opt_push: 'Server alarm when the screen is locked', opt_push_s: 'Your proxy server keeps watching the train and sends push notifications at alarm time, even while this page is frozen. Needs the proxy URL; on iPhone the app must be installed to the home screen.',
     opt_push_na: 'Not available here: enter a proxy URL (and on iPhone install the app to the home screen).',
     push_active: 'Server alarm active', push_pending: 'Registering server alarm…', push_err: 'Server alarm failed: {e}', push_test: 'Test push', push_test_ok: 'Test notification sent. Lock the phone and check that it arrived.', push_test_fail: 'Test push failed: {e}'
@@ -330,6 +331,7 @@ const STR = {
     proxy_label: 'Deine Proxy-URL', proxy_help: 'Die ÖBB veröffentlichen keine offenen Echtzeitdaten. Den kleinen Proxy aus dem Ordner proxy/ (kostenloser Cloudflare Worker) ausrollen und die URL hier eintragen. Er liest Verspätungen aus dem ÖBB-Scotty-Backend für alle Betreiber in Österreich und die meisten grenzüberschreitenden Züge.',
     oebb_found: 'ÖBB live: Zug gefunden ({n})', oebb_notfound: 'ÖBB live: Zug an diesem Bahnhof nicht gefunden', oebb_off: 'ÖBB live: kein Proxy eingetragen', oebb_err: 'ÖBB live: Proxy-Fehler ({e})',
     live_src: 'Echtzeitdaten · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
+    cov_full: 'Verspätungen live für {c}: für Fernzüge verfügbar.', cov_partial: 'Verspätungen live für {c}: nur manche Betreiber veröffentlichen sie; sonst übernimmt die GPS-Schätzung.', cov_none: 'Verspätungen live für {c}: keine offenen Daten. Der Wecker stützt sich auf Fahrplan und GPS-Schätzung, GPS also eingeschaltet lassen.', cov_unknown: 'Verspätungen live für {c}: Abdeckung unbekannt; in der Zugliste zeigt ein grünes Etikett, wo Echtzeit vorhanden ist.',
     opt_push: 'Server-Wecker bei gesperrtem Bildschirm', opt_push_s: 'Dein Proxy-Server beobachtet den Zug weiter und schickt zur Weckzeit Push-Benachrichtigungen, auch wenn diese Seite eingefroren ist. Braucht die Proxy-URL; am iPhone muss die App zum Homescreen hinzugefügt sein.',
     opt_push_na: 'Hier nicht verfügbar: Proxy-URL eintragen (und am iPhone die App zum Homescreen hinzufügen).',
     push_active: 'Server-Wecker aktiv', push_pending: 'Server-Wecker wird registriert…', push_err: 'Server-Wecker fehlgeschlagen: {e}', push_test: 'Test-Push', push_test_ok: 'Test-Benachrichtigung gesendet. Handy sperren und prüfen, ob sie ankommt.', push_test_fail: 'Test-Push fehlgeschlagen: {e}'
@@ -471,7 +473,12 @@ function pickStation(r){
   if(!$('arr-when').value){ const d=new Date(); d.setSeconds(0,0); if(d.getHours()>=14){ d.setDate(d.getDate()+1); d.setHours(6,30,0,0);} $('arr-when').value = toLocalInputValue(d); }
   $('arr-when').focus();
 }
-function showStationPicked(){ const s=state.station; $('station-picked').hidden=false; $('station-picked').innerHTML = `<b>${escapeHtml(s.name)}</b> <span class="muted mono">${escapeHtml(s.country||'')}</span><br><span class="muted">${escapeHtml(t('tz_note',{tz:s.tz||'local'}))}</span>`; }
+/* Open live-data coverage for long-distance rail, checked October 2026 (Transitous GTFS-RT feeds + ÖBB backend for AT).
+   full: delays normally present · partial: some operators only · none: no open realtime, GPS estimate carries the alarm */
+const COVERAGE = { full:['AT','DE','CH','FR','NL','BE','PL','NO','GB','IE','PT'], partial:['LU','SI','HR','SK','CZ','FI','RO','RS','BG','GR','EE','LT','LV','ES'], none:['IT','DK','SE','HU'] };
+function coverageOf(cc){ for(const k of ['full','partial','none']) if(COVERAGE[k].includes(cc)) return k; return 'unknown'; }
+function countryName(cc){ try{ return new Intl.DisplayNames([locale()], {type:'region'}).of(cc); }catch(e){ return cc; } }
+function showStationPicked(){ const s=state.station; const cov = s.country ? coverageOf(s.country) : 'unknown'; $('station-picked').hidden=false; $('station-picked').innerHTML = `<b>${escapeHtml(s.name)}</b> <span class="muted mono">${escapeHtml(s.country||'')}</span><br><span class="muted">${escapeHtml(t('tz_note',{tz:s.tz||'local'}))}</span><br><span class="${cov==='full'?'ok-txt':cov==='none'?'warn-txt':'muted'}">${escapeHtml(t('cov_'+cov,{c: s.country ? countryName(s.country) : '?'}))}</span>`; }
 
 /* ---------- train search ---------- */
 $('btn-find').addEventListener('click', ()=> findTrains());
