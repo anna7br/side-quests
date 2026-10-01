@@ -189,9 +189,11 @@ async function runAlarms(env, force = false) {
     const now = Date.now(); const log = { id };
     const schedMs = new Date(a.scheduledArrival).getTime();
     if (now > schedMs + 6 * 3600e3) { await env.ALARMS.delete(key(id)); gone.push(id); log.deleted = 'expired'; out.push(log); return; }
-    // every minute inside the last 3 h before the scheduled alarm time (or once pushing started), else only every 10 min
-    const near = now >= schedMs - a.lead * 60e3 - 3 * 3600e3 || (a.pushCount || 0) > 0;
-    if (!near && !force && new Date(now).getUTCMinutes() % 10 !== 0) { log.skipped = true; out.push(log); return; }
+    // cadence by time left to the scheduled alarm: > 6 h every 30 min, > 3 h every 15 min, > 1 h every 10 min,
+    // last hour every minute; once pushing has started, every minute
+    const toAlarm = schedMs - a.lead * 60e3 - now;
+    const interval = (a.pushCount || 0) > 0 || toAlarm <= 3600e3 ? 1 : toAlarm <= 3 * 3600e3 ? 10 : toAlarm <= 6 * 3600e3 ? 15 : 30;
+    if (!force && interval > 1 && new Date(now).getUTCMinutes() % interval !== 0) { log.skipped = true; out.push(log); return; }
     let ev = null;
     try { ev = await evaluate(a); } catch (e) { log.err = String(e.message || e); ev = a.last || null; }
     const etaMs = ev?.eta ? new Date(ev.eta).getTime() : schedMs;

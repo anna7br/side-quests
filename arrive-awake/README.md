@@ -10,9 +10,9 @@ Live app: https://anna7br.github.io/side-quests/arrive-awake/ (install it to the
 
 1. **Destination station** – searched via Transitous geocoding (all of Europe).
 2. **Train** – arrivals at that station around your planned time; duplicates from different data feeds are grouped and all of them are polled.
-3. **Alarm** – lead time (3–90 min). While armed the app polls every 1–10 minutes (more often as the alarm nears), recomputes
-   `alarm = expected arrival − lead`, and rings with sound, vibration and a notification. "Snooze 5 min" and a safety ring at the actual arrival are included. The armed state survives a page reload.
-4. **Server alarm (optional, recommended)** – with the backend deployed, the armed alarm is also stored on the server. A cron job re-evaluates the arrival every minute and sends **Web Push notifications** at alarm time, repeated every minute until you tap "I'm awake" (max 20). This is what rings when the phone is locked and the page is frozen.
+3. **Alarm** – lead time (3–90 min). While armed the app re-reads the live data every 30 min while the alarm is more than 6 h away, every 15 min above 3 h, every 10 min above 1 h and every minute in the last hour. It recomputes
+   `alarm = expected arrival − lead` and rings with sound, vibration and a notification. "Snooze 5 min" and a safety ring at the actual arrival are included. The armed state survives a page reload.
+4. **Server alarm (optional, recommended)** – with the backend deployed, the armed alarm is also stored on the server. A cron job re-evaluates the arrival on the same cadence and sends **Web Push notifications** at alarm time, repeated every minute until you tap "I'm awake" (max 20). This is what rings when the phone is locked and the page is frozen.
 
 Expected arrival is taken from, in order of trust:
 
