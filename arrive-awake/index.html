@@ -51,6 +51,46 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .brand svg{width:34px;height:34px;flex:none}
 .brand h1{font:600 26px/1 var(--font-display);letter-spacing:.01em;margin:0}
 .brand small{display:block;font:400 13px/1.2 var(--font-body);color:var(--muted);margin-top:3px}
+/* arrival time picker (replaces the native datetime-local popup) */
+.picker-btn{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;color:var(--fg);font-variant-numeric:tabular-nums}
+.picker-btn svg{width:18px;height:18px;flex:none;color:var(--muted)}
+.picker-btn[aria-expanded="true"]{border-color:var(--accent)}
+.picker{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:8px}
+.picker-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.picker-head output{display:flex;flex-direction:column;gap:3px}
+.pk-day{font-size:13px;color:var(--muted)}
+.pk-time{font:500 34px/1 var(--font-mono);color:var(--accent);letter-spacing:-.02em}
+.picker-lab{font:600 11px/1 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-top:6px}
+.chips{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x proximity;padding-bottom:6px;scrollbar-width:thin}
+.chip,.grid6 button{border:1px solid var(--line);background:var(--bg);border-radius:var(--radius);color:var(--fg)}
+.chip{flex:none;min-width:64px;padding:7px 8px;text-align:center;scroll-snap-align:center;display:flex;flex-direction:column;gap:3px}
+.chip small{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.chip b{font:600 14px/1 var(--font-body);white-space:nowrap}
+.grid6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.grid6 button{padding:9px 0;font:500 15px/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.chip:hover,.grid6 button:hover{border-color:var(--muted)}
+.chip[aria-pressed="true"],.grid6 button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.chip[aria-pressed="true"] small{color:inherit;opacity:.85}
+.btn.small{padding:7px 12px;font-size:14px}
+
+/* alarm dock: sticks to the bottom as soon as a train is selected, so the alarm can be set without scrolling */
+.dock{position:fixed;left:0;right:0;bottom:0;z-index:5;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -10px 28px rgba(0,0,0,.14);padding:10px 16px calc(env(safe-area-inset-bottom,0px) + 10px);animation:dockin .22s ease-out}
+@keyframes dockin{from{transform:translateY(100%)}to{transform:none}}
+.dock-in{max-width:30rem;margin:0 auto;display:grid;gap:8px}
+.dock-top{display:flex;align-items:center;gap:8px}
+.dock-info{min-width:0;flex:1}
+.dock-info b{display:block;font:600 18px/1.15 var(--font-display);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-info > span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dock-link{background:none;border:0;padding:6px 4px;font:600 13px var(--font-body);color:var(--accent);flex:none}
+.dock-x{width:30px;height:30px;display:grid;place-items:center;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted);flex:none;padding:0}
+.dock-x svg{width:14px;height:14px}
+.dock-act{display:flex;gap:10px;align-items:stretch}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:var(--radius);background:var(--bg);flex:none}
+.stepper button{width:38px;align-self:stretch;border:0;background:none;font:600 20px/1 var(--font-mono);color:var(--fg)}
+.stepper .val{min-width:4.6ch;text-align:center;font:500 15px/1.1 var(--font-mono);font-variant-numeric:tabular-nums}
+.stepper .val small{display:block;font-size:10px;color:var(--muted);letter-spacing:.04em}
+.dock .btn.primary{flex:1;font:600 19px/1 var(--font-display);letter-spacing:.02em;padding:13px 10px}
+.wrap.has-dock{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
 .theme-btn{display:grid;place-items:center;width:34px;height:30px;padding:0;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
 .theme-btn:hover{color:var(--fg)}
 .theme-btn svg{width:16px;height:16px}
@@ -177,9 +217,20 @@ footer a{color:inherit}
     <h2 data-i18n="step_time"></h2>
     <div class="row">
       <label class="field grow"><span data-i18n="arr_label"></span>
-        <input class="input" id="arr-when" type="datetime-local" step="60">
+        <button type="button" class="input picker-btn" id="when-btn" aria-expanded="false" aria-controls="when-panel"><span id="when-text"></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></button>
+        <input type="hidden" id="arr-when">
       </label>
       <label class="check" style="align-items:center;padding-top:22px"><input type="checkbox" id="opt-ld" checked><span data-i18n="ld_only"></span></label>
+    </div>
+    <div class="picker" id="when-panel" hidden>
+      <div class="picker-head"><output id="when-big" for="arr-when"></output><button type="button" class="btn ghost small" id="when-now" data-i18n="pk_now"></button></div>
+      <div class="picker-lab" data-i18n="pk_day"></div>
+      <div class="chips" id="when-days" role="group"></div>
+      <div class="picker-lab" data-i18n="pk_hour"></div>
+      <div class="grid6" id="when-hours" role="group"></div>
+      <div class="picker-lab" data-i18n="pk_min"></div>
+      <div class="grid6" id="when-mins" role="group"></div>
+      <button type="button" class="btn primary" id="when-done" data-i18n="pk_done"></button>
     </div>
     <button class="btn primary" id="btn-find" type="button" data-i18n="find"></button>
     <div class="msg" id="trains-msg" hidden></div>
@@ -212,6 +263,21 @@ footer a{color:inherit}
     </div>
     <div class="msg warn" id="arm-msg" hidden></div>
   </section>
+
+  <div class="dock" id="dock" hidden role="region" aria-labelledby="dock-train">
+    <div class="dock-in">
+      <div class="dock-top">
+        <div class="dock-info"><b id="dock-train"></b><span id="dock-sub"></span></div>
+        <button type="button" class="dock-link" id="dock-details" data-i18n="dock_options"></button>
+        <button type="button" class="dock-x" id="dock-close" aria-label="Dismiss"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="dock-act">
+        <div class="stepper" role="group" aria-labelledby="dock-lead-lab"><button type="button" id="dock-minus" aria-label="−">−</button><output class="val" id="dock-lead" for="lead">20<small id="dock-lead-lab">min</small></output><button type="button" id="dock-plus" aria-label="+">+</button></div>
+        <button class="btn primary" id="dock-arm" type="button" data-i18n="arm"></button>
+      </div>
+      <div class="msg warn" id="dock-msg" hidden></div>
+    </div>
+  </div>
 
   <details class="step" id="advanced">
     <summary style="cursor:pointer;font:600 13px/1.2 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)" data-i18n="adv_title"></summary>
@@ -267,7 +333,7 @@ footer a{color:inherit}
 /* ---------- i18n ---------- */
 const STR = {
   en: {
-    tagline: 'The alarm that follows your train, delays included.', about: 'About & coverage', theme_to_dark: 'Switch to dark mode', theme_to_light: 'Switch to light mode',
+    tagline: 'The alarm that follows your train, delays included.', about: 'About & coverage', theme_to_dark: 'Switch to dark mode', theme_to_light: 'Switch to light mode', pk_today: 'Today', pk_tomorrow: 'Tomorrow', pk_day: 'Day', pk_hour: 'Hour', pk_min: 'Minute', pk_now: 'Now', pk_done: 'Done', dock_rings: 'Rings at {t}', dock_loading: 'Loading live data…', dock_options: 'Options', dock_close: 'Dismiss', lead_less: 'Fewer minutes before arrival', lead_more: 'More minutes before arrival',
     step_station: '1 · Where do you get off?',
     dest_label: 'Destination station', dest_ph: 'e.g. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Which train?', arr_label: 'Planned arrival (about)', ld_only: 'Long-distance only',
@@ -304,7 +370,7 @@ const STR = {
     push_active: 'Server alarm active', push_pending: 'Registering server alarm…', push_err: 'Server alarm failed: {e}', push_test: 'Test push', push_test_ok: 'Test notification sent. Lock the phone and check that it arrived.', push_test_fail: 'Test push failed: {e}'
   },
   de: {
-    tagline: 'Der Wecker, der deinem Zug folgt, Verspätung inklusive.', about: 'Infos & Abdeckung', theme_to_dark: 'Zum dunklen Design wechseln', theme_to_light: 'Zum hellen Design wechseln',
+    tagline: 'Der Wecker, der deinem Zug folgt, Verspätung inklusive.', about: 'Infos & Abdeckung', theme_to_dark: 'Zum dunklen Design wechseln', theme_to_light: 'Zum hellen Design wechseln', pk_today: 'Heute', pk_tomorrow: 'Morgen', pk_day: 'Tag', pk_hour: 'Stunde', pk_min: 'Minute', pk_now: 'Jetzt', pk_done: 'Fertig', dock_rings: 'Weckt um {t}', dock_loading: 'Lade Echtzeitdaten …', dock_options: 'Optionen', dock_close: 'Schließen', lead_less: 'Weniger Minuten vor Ankunft', lead_more: 'Mehr Minuten vor Ankunft',
     step_station: '1 · Wo steigst du aus?',
     dest_label: 'Zielbahnhof', dest_ph: 'z. B. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Welcher Zug?', arr_label: 'Geplante Ankunft (ungefähr)', ld_only: 'Nur Fernverkehr',
@@ -364,7 +430,7 @@ function applyLang(){
   document.querySelectorAll('[data-i18n-ph]').forEach(el=> el.placeholder=t(el.dataset.i18nPh));
   document.querySelectorAll('.lang button').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.lang===lang)));
   try{ localStorage.setItem('aa.lang', lang); }catch(e){}
-  paintTheme();
+  paintTheme(); paintWhen();
   if(state.station) showStationPicked();
   renderTrains(); renderTripSummary(); if(armed) renderArmed();
 }
@@ -523,8 +589,48 @@ function pickStation(r){
   $('station-results').innerHTML=''; $('station-q').value=r.name; showStationPicked();
   $('step-time').hidden=false; $('step-alarm').hidden=true; state.groups=[]; state.selected=null; renderTrains();
   if(!$('arr-when').value){ const d=new Date(); d.setSeconds(0,0); if(d.getHours()>=14){ d.setDate(d.getDate()+1); d.setHours(6,30,0,0);} $('arr-when').value = toLocalInputValue(d); }
-  $('arr-when').focus();
+  paintWhen();
 }
+/* ---------- arrival time picker ---------- */
+const pk = { open:false };
+const pad2 = n=> String(n).padStart(2,'0');
+const startOfDay = d=>{ const x=new Date(d); x.setHours(0,0,0,0); return x; };
+const fmtL = (d, o)=> new Intl.DateTimeFormat(locale(), o).format(d);
+function getWhen(){ const v=$('arr-when').value; const d = v ? new Date(v) : new Date(); return isNaN(d) ? new Date() : d; }
+function setWhen(d, center){ $('arr-when').value = toLocalInputValue(d); paintWhen(center); }
+function dayName(d){ const diff=Math.round((startOfDay(d)-startOfDay(new Date()))/864e5); return diff===0 ? t('pk_today') : diff===1 ? t('pk_tomorrow') : fmtL(d,{weekday:'short', day:'numeric', month:'short'}); }
+function gridButtons(el, values, selected, onPick){
+  el.innerHTML='';
+  values.forEach(v=>{ const b=document.createElement('button'); b.type='button'; b.textContent=pad2(v); b.setAttribute('aria-pressed', String(v===selected)); b.addEventListener('click', ()=> onPick(v)); el.appendChild(b); });
+}
+function paintWhen(center){
+  const d=getWhen(); const hm=`${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  $('when-text').textContent = `${dayName(d)}, ${hm}`;
+  $('when-big').innerHTML = `<span class="pk-day">${escapeHtml(fmtL(d,{weekday:'long', day:'numeric', month:'long'}))}</span><span class="pk-time">${hm}</span>`;
+  if(!pk.open) return;
+  const days=$('when-days'), keep=days.scrollLeft; days.innerHTML=''; let sel=null;
+  const today=startOfDay(new Date());
+  for(let i=0;i<21;i++){
+    const day=new Date(today); day.setDate(today.getDate()+i);
+    const on = startOfDay(d).getTime()===day.getTime();
+    const b=document.createElement('button'); b.type='button'; b.className='chip'; b.setAttribute('aria-pressed', String(on));
+    b.innerHTML = `<small>${escapeHtml(i===0 ? t('pk_today') : i===1 ? t('pk_tomorrow') : fmtL(day,{weekday:'short'}))}</small><b>${escapeHtml(fmtL(day,{day:'numeric', month:'short'}))}</b>`;
+    b.addEventListener('click', ()=>{ const n=getWhen(); n.setFullYear(day.getFullYear(), day.getMonth(), day.getDate()); setWhen(n); });
+    days.appendChild(b); if(on) sel=b;
+  }
+  days.scrollLeft = (center && sel) ? sel.offsetLeft - (days.clientWidth - sel.offsetWidth)/2 : keep;
+  gridButtons($('when-hours'), Array.from({length:24},(_,h)=>h), d.getHours(), h=>{ const n=getWhen(); n.setHours(h); setWhen(n); });
+  gridButtons($('when-mins'), Array.from({length:12},(_,m)=>m*5), d.getMinutes(), m=>{ const n=getWhen(); n.setMinutes(m,0,0); setWhen(n); });
+}
+function openWhen(open){
+  pk.open=open; $('when-panel').hidden=!open; $('when-btn').setAttribute('aria-expanded', String(open));
+  if(open) paintWhen(true);
+}
+$('when-btn').addEventListener('click', ()=> openWhen(!pk.open));
+$('when-done').addEventListener('click', ()=>{ openWhen(false); $('when-btn').focus(); });
+$('when-now').addEventListener('click', ()=>{ const n=new Date(); n.setSeconds(0,0); setWhen(n, true); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape' && pk.open){ openWhen(false); $('when-btn').focus(); } });
+
 /* Open live-data coverage for long-distance rail, checked October 2026 (Transitous GTFS-RT feeds + ÖBB backend for AT).
    full: delays normally present · partial: some operators only · none: no open realtime, GPS estimate carries the alarm */
 const COVERAGE = { full:['AT','DE','CH','FR','NL','BE','PL','NO','GB','IE','PT','IT'], partial:['LU','SI','HR','SK','CZ','FI','RO','RS','BG','GR','EE','LT','LV','ES','HU'], none:['DK','SE'] };
@@ -533,7 +639,7 @@ function countryName(cc){ try{ return new Intl.DisplayNames([locale()], {type:'r
 function showStationPicked(){ const s=state.station; const cov = s.country ? coverageOf(s.country) : 'unknown'; $('station-picked').hidden=false; $('station-picked').innerHTML = `<b>${escapeHtml(s.name)}</b> <span class="muted mono">${escapeHtml(s.country||'')}</span><br><span class="muted">${escapeHtml(t('tz_note',{tz:s.tz||'local'}))}</span><br><span class="${cov==='full'?'ok-txt':cov==='none'?'warn-txt':'muted'}">${escapeHtml(t('cov_'+cov,{c: s.country ? countryName(s.country) : '?'}))}</span>`; }
 
 /* ---------- train search ---------- */
-$('btn-find').addEventListener('click', ()=> findTrains('start'));
+$('btn-find').addEventListener('click', ()=>{ openWhen(false); findTrains('start'); });
 $('btn-later').addEventListener('click', ()=> findTrains('later'));
 $('btn-earlier').addEventListener('click', ()=> findTrains('earlier'));
 const PAGE_N = 25;
@@ -599,14 +705,41 @@ function renderTrains(){
     b.addEventListener('click', ()=> selectTrain(g));
     li.appendChild(b); ul.appendChild(li);
   });
+  updateDock();
 }
 async function selectTrain(g){
-  state.selected=g; renderTrains(); $('step-alarm').hidden=false; $('arm-msg').hidden=true;
+  state.selected=g; state.tripPreview=null; state.tripLoading=true; armMsg(''); renderTrains(); $('step-alarm').hidden=false;
   $('trip-summary').textContent=t('loading'); $('trip-stops').innerHTML='';
-  try{ const ctx=ctxOf(g, state.station); lastExtTry=0; state.tripPreview = await loadTripInfo(ctx); g.ext=ctx.ext||[]; g.extErrors=ctx.extErrors||[]; renderTripSummary(); }
-  catch(e){ state.tripPreview=null; $('trip-summary').textContent=t('arm_fail')+' ('+e.message+')'; }
-  $('step-alarm').scrollIntoView({behavior:'smooth', block:'start'});
+  try{
+    const ctx=ctxOf(g, state.station); lastExtTry=0; const info = await loadTripInfo(ctx);
+    if(state.selected!==g) return;                       // another train was picked meanwhile
+    state.tripPreview = info; g.ext=ctx.ext||[]; g.extErrors=ctx.extErrors||[]; renderTripSummary();
+  }catch(e){ if(state.selected!==g) return; state.tripPreview=null; $('trip-summary').textContent=t('arm_fail')+' ('+e.message+')'; }
+  state.tripLoading=false; updateDock();
 }
+/* ---------- alarm dock ---------- */
+function updateDock(){
+  const dock=$('dock'), g=state.selected;
+  dock.hidden=!g; $('setup').classList.toggle('has-dock', !!g);
+  if(!g) return;
+  const tz=g.tz||state.station?.tz, info=state.tripPreview, lead=+$('lead').value;
+  const names=[...g.names]; const label=(names.filter(n=>/\d/.test(n)).slice(0,2).join(' / ')) || names[0] || '?';
+  $('dock-train').textContent = `${label} · ${fmtTime(g.scheduledArrival,tz)}`;
+  $('dock-lead').firstChild.textContent = lead;
+  $('dock-minus').setAttribute('aria-label', t('lead_less')); $('dock-plus').setAttribute('aria-label', t('lead_more')); $('dock-close').setAttribute('aria-label', t('dock_close'));
+  const arm=$('dock-arm');
+  if(!info){ $('dock-sub').textContent = state.tripLoading ? t('dock_loading') : t('arm_fail'); arm.disabled=true; return; }
+  const eta=info.realArr||info.schedArr||g.scheduledArrival;
+  const ring=new Date(new Date(eta).getTime()-lead*60000).toISOString();
+  const delay=minsDiff(eta, g.scheduledArrival);
+  $('dock-sub').innerHTML = `${escapeHtml(t('dock_rings',{t:fmtTime(ring,tz)}))} · ` + (info.realTime ? `<span class="ok-txt">${escapeHtml(delay? delayStr(delay) : t('on_time'))}</span>` : escapeHtml(t('sched_only')));
+  arm.disabled=false;
+}
+function stepLead(d){ const el=$('lead'); el.value=Math.min(+el.max, Math.max(+el.min, +el.value+d)); $('lead-out').value=el.value; updateDock(); }
+$('dock-minus').addEventListener('click', ()=> stepLead(-5));
+$('dock-plus').addEventListener('click', ()=> stepLead(5));
+$('dock-close').addEventListener('click', ()=>{ state.selected=null; state.tripPreview=null; $('step-alarm').hidden=true; renderTrains(); });
+$('dock-details').addEventListener('click', ()=> $('step-alarm').scrollIntoView({behavior:'smooth', block:'start'}));
 function renderTripSummary(){
   if(!state.selected) return; const g=state.selected, info=state.tripPreview; const tz=g.tz||state.station?.tz;
   const names=[...g.names].join(' / ');
@@ -713,10 +846,12 @@ function computeLive(info, now){
 }
 
 /* ---------- arming ---------- */
-$('lead').addEventListener('input', e=> $('lead-out').value=e.target.value);
+$('lead').addEventListener('input', e=>{ $('lead-out').value=e.target.value; updateDock(); });
 $('btn-test').addEventListener('click', async ()=>{ await unlockAudio(); startAlarmSound(); if(navigator.vibrate && $('opt-vibrate').checked) navigator.vibrate([400,200,400]); setTimeout(stopAlarmSound, 2500); });
-$('btn-arm').addEventListener('click', async ()=>{
-  if(!state.selected || !state.tripPreview){ $('arm-msg').hidden=false; $('arm-msg').textContent=t('arm_fail'); return; }
+function armMsg(text){ for(const id of ['arm-msg','dock-msg']){ const m=$(id); m.hidden=!text; m.textContent=text||''; } }
+async function armNow(){
+  if(!state.selected || !state.tripPreview){ armMsg(t('arm_fail')); return; }
+  armMsg('');
   const g=state.selected;
   const wantPush = $('opt-push').checked && !$('opt-push').disabled;
   // permission prompts must stay inside the click gesture (iOS): ask first, unlock audio after
@@ -727,7 +862,9 @@ $('btn-arm').addEventListener('click', async ()=>{
   await unlockAudio();
   startArmed(state.tripPreview);
   setupPush();
-});
+}
+$('btn-arm').addEventListener('click', armNow);
+$('dock-arm').addEventListener('click', armNow);
 function updatePushOption(){
   const ok = pushSupported() && !!proxyUrl;
   $('opt-push').disabled = !ok; $('push-na').hidden = ok;
