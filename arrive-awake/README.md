@@ -1,6 +1,6 @@
 # Arrive Awake
 
-*Wake up on train time, delays included.*
+*The alarm that follows your train, delays included.*
 
 A mobile-first web app (PWA) that wakes you a chosen number of minutes before your train's **real**, delay-adjusted arrival, instead of at a fixed clock time. Built for night trains: pick your destination, pick your train, set "20 min before", go to sleep.
 
