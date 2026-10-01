@@ -1,0 +1,5 @@
+node_modules/
+proxy/.dev.vars
+proxy/.wrangler/
+.claude/
+*.log

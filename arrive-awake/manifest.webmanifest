@@ -1,0 +1,17 @@
+{
+  "name": "Arrive Awake",
+  "short_name": "Arrive Awake",
+  "description": "A train alarm that moves with your train: wakes you a set number of minutes before the real, delay-adjusted arrival.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0c10",
+  "theme_color": "#0b0c10",
+  "lang": "en",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

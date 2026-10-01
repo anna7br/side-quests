@@ -1,0 +1,20 @@
+name = "arrive-awake-oebb-proxy"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+# Alarm check every minute (server-side alarm with Web Push)
+[triggers]
+crons = ["* * * * *"]
+
+# Alarm store. Create it once with:  npx wrangler kv namespace create ALARMS
+# and paste the printed id below.
+[[kv_namespaces]]
+binding = "ALARMS"
+id = "59ea1a4698fc4d61a7de6bcc6c46ca7e"
+
+# Secrets (not in this file):  npx wrangler secret put VAPID_PRIVATE_KEY / VAPID_PUBLIC_KEY / VAPID_SUBJECT
+# Generate keys with:  npm run keys -- mailto:you@example.com
+
+# Optional: restrict CORS to your own app origin once deployed
+# [vars]
+# ALLOWED_ORIGIN = "https://anna7br.github.io"

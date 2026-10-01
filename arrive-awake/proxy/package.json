@@ -1,0 +1,13 @@
+{
+  "name": "arrive-awake-oebb-proxy",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "deploy": "wrangler deploy",
+    "keys": "node gen-vapid-keys.mjs"
+  },
+  "dependencies": {
+    "@block65/webcrypto-web-push": "^2.0.0"
+  }
+}

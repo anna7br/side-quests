@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arrive Awake</title>
+<meta name="description" content="A train alarm that moves with your train: it wakes you a set number of minutes before the real, delay-adjusted arrival.">
+<meta name="theme-color" content="#0b0c10">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arrive Awake">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one phone-width column. Setup is a form stack; the armed screen is a true-black dial for night use. */
+:root{
+  --bg:#0b0c10; --surface:#15171e; --surface-2:#1d2029; --fg:#f2efe6; --muted:#9a9890; --line:#2a2d38;
+  --accent:#f2a93b; --accent-ink:#1a1206;            /* sleeper-cabin reading-lamp amber */
+  --ok:#5fc48f; --warn:#f2a93b; --bad:#ef6b5e; --info:#6fb3f2;
+  --font-display:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
+  --font-body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"DM Mono",ui-monospace,Menlo,Consolas,monospace;
+  --radius:10px;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg:#f6f3ec; --surface:#ffffff; --surface-2:#ece8de; --fg:#1b1a17; --muted:#6b6962; --line:#dcd7cb;
+    --accent:#b86f0c; --accent-ink:#ffffff; --ok:#1f8a55; --warn:#b86f0c; --bad:#c0392b; --info:#1f6fb8;
+    color-scheme:light;
+  }
+}
+:root[data-theme="light"]{
+  --bg:#f6f3ec; --surface:#ffffff; --surface-2:#ece8de; --fg:#1b1a17; --muted:#6b6962; --line:#dcd7cb;
+  --accent:#b86f0c; --accent-ink:#ffffff; --ok:#1f8a55; --warn:#b86f0c; --bad:#c0392b; --info:#1f6fb8;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 var(--font-body);-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:30rem;margin:0 auto;padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 12px) calc(env(safe-area-inset-bottom,0px) + 24px);min-height:100%}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{width:34px;height:34px;flex:none}
+.brand h1{font:600 26px/1 var(--font-display);letter-spacing:.01em;margin:0}
+.brand small{display:block;font:400 13px/1.2 var(--font-body);color:var(--muted);margin-top:3px}
+.lang{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.lang button{background:none;border:0;padding:5px 10px;font:500 13px var(--font-mono);color:var(--muted)}
+.lang button[aria-pressed="true"]{background:var(--surface-2);color:var(--fg)}
+
+.step{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.step > h2{margin:0;font:600 13px/1.2 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+label.field{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--muted)}
+.input{width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;color:var(--fg);min-width:0}
+.input:focus{border-color:var(--accent);outline:none}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row > *{min-width:0}
+.grow{flex:1 1 160px}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:12px 16px;font-weight:600;color:var(--fg)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.ghost{background:none}
+.btn.danger{border-color:var(--bad);color:var(--bad);background:none}
+.btn.big{width:100%;padding:16px;font:600 20px/1 var(--font-display);letter-spacing:.02em}
+
+.list{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.list button{width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;display:grid;grid-template-columns:auto 1fr auto;gap:4px 12px;align-items:center}
+.list button:hover{border-color:var(--muted)}
+.list button[aria-selected="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.list .time{font:500 20px/1 var(--font-mono);font-variant-numeric:tabular-nums}
+.list .name{font-weight:600}
+.list .sub{grid-column:2 / span 2;color:var(--muted);font-size:13px;overflow-wrap:anywhere}
+.list .country{font:400 12px var(--font-mono);color:var(--muted)}
+.pill{display:inline-block;font:500 11px/1 var(--font-mono);padding:4px 7px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.live{color:var(--ok);border-color:var(--ok)}
+.pill.night{color:var(--info);border-color:var(--info)}
+.pill.cancel{color:var(--bad);border-color:var(--bad)}
+
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15px}
+.check input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--accent);flex:none}
+.check span small{display:block;color:var(--muted);font-size:13px}
+
+.lead{display:flex;align-items:center;gap:14px}
+.lead output{font:500 34px/1 var(--font-mono);font-variant-numeric:tabular-nums;min-width:3.2ch;text-align:right}
+.lead input[type=range]{flex:1;accent-color:var(--accent)}
+.lead .unit{color:var(--muted);font-size:14px}
+
+.msg{border-radius:var(--radius);padding:10px 12px;font-size:14px;border:1px solid var(--line);background:var(--surface)}
+.msg.bad{border-color:var(--bad)}
+.msg.warn{border-color:var(--warn)}
+.muted{color:var(--muted)}
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.stops{margin:0;padding:0;list-style:none;font-size:14px;max-height:14rem;overflow:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.stops li{display:flex;gap:10px;padding:6px 12px;border-top:1px solid var(--line)}
+.stops li:first-child{border-top:0}
+.stops li.dest{color:var(--accent);font-weight:600}
+.stops li.passed{color:var(--muted)}
+.stops .t{font-family:var(--font-mono);font-variant-numeric:tabular-nums;flex:none;width:5.6ch}
+.stops .d{color:var(--warn);font-family:var(--font-mono);flex:none;margin-left:auto}
+footer{margin-top:28px;color:var(--muted);font-size:12px;line-height:1.5}
+footer a{color:inherit}
+
+/* Armed screen: deliberately single-theme true black for OLED at night */
+.armed{--bg:#000;--surface:#0d0d10;--surface-2:#16161b;--fg:#ece8dc;--muted:#7f7d77;--line:#232329;--accent:#f2a93b;--accent-ink:#1a1206;
+  --ok:#5fc48f;--warn:#f2a93b;--bad:#ef6b5e;--info:#6fb3f2;color-scheme:dark;
+  position:fixed;inset:0;background:var(--bg);color:var(--fg);overflow:auto;z-index:5}
+.armed .inner{max-width:30rem;margin:0 auto;padding-inline:16px;padding-block:calc(env(safe-area-inset-top,0px) + 14px) calc(env(safe-area-inset-bottom,0px) + 20px);min-height:100%;display:flex;flex-direction:column;gap:16px}
+.armed .train{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.armed .train b{font:600 22px/1.1 var(--font-display)}
+.dial{text-align:center;padding:18px 0 8px}
+.dial .label{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.dial .alarm{font:500 clamp(60px,20vw,88px)/1 var(--font-mono);font-variant-numeric:tabular-nums;color:var(--accent);margin:6px 0 2px;letter-spacing:-.02em}
+.dial .count{font:400 16px var(--font-mono);color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:10px 12px;min-width:0}
+.tile .k{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.tile .v{font:500 24px/1.1 var(--font-mono);font-variant-numeric:tabular-nums;margin-top:4px;overflow-wrap:anywhere}
+.tile .v small{font-size:13px;color:var(--muted);font-family:var(--font-body)}
+.tile.wide{grid-column:1 / -1}
+.src{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--muted)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.ok{background:var(--ok)} .dot.warn{background:var(--warn)} .dot.bad{background:var(--bad)}
+.armed .actions{display:flex;gap:10px;margin-top:auto}
+.armed .actions .btn{flex:1}
+.pos{font-size:14px;color:var(--muted)}
+.pos b{color:var(--fg);font-weight:600}
+.ok-txt{color:var(--ok)} .warn-txt{color:var(--warn)} .bad-txt{color:var(--bad)}
+
+/* Ringing overlay */
+.ring{position:fixed;inset:0;z-index:10;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;animation:flash 1s steps(2) infinite}
+@keyframes flash{0%{background:#000}50%{background:#3a2600}}
+.ring h2{font:600 clamp(36px,10vw,56px)/1.05 var(--font-display);margin:0;text-wrap:balance}
+.ring p{margin:0;font-size:18px;color:#e8e2d4;max-width:28rem}
+.ring .big{background:#f2a93b;color:#1a1206;border:0;border-radius:14px;padding:22px 28px;font:600 28px/1 var(--font-display);width:min(100%,22rem)}
+.ring .snooze{background:none;border:1px solid #666;color:#ddd;border-radius:10px;padding:12px 18px}
+</style>
+</head>
+<body>
+<div class="wrap" id="setup">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="30" fill="#0b0c10" stroke="#f2a93b" stroke-width="3"/><path d="M38 14a16 16 0 1 0 12 26 13 13 0 0 1-12-26z" fill="#f2a93b"/><rect x="14" y="40" width="22" height="12" rx="3" fill="#ece8dc"/><circle cx="19" cy="55" r="2.5" fill="#ece8dc"/><circle cx="31" cy="55" r="2.5" fill="#ece8dc"/></svg>
+      <div><h1>Arrive Awake</h1><small data-i18n="tagline"></small></div>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" data-lang="en" aria-pressed="true">EN</button>
+      <button type="button" data-lang="de" aria-pressed="false">DE</button>
+    </div>
+  </header>
+
+  <section class="step">
+    <h2 data-i18n="step_station"></h2>
+    <label class="field"><span data-i18n="dest_label"></span>
+      <input class="input" id="station-q" type="search" autocomplete="off" spellcheck="false" data-i18n-ph="dest_ph">
+    </label>
+    <ul class="list" id="station-results"></ul>
+    <div class="msg" id="station-picked" hidden></div>
+  </section>
+
+  <section class="step" id="step-time" hidden>
+    <h2 data-i18n="step_time"></h2>
+    <div class="row">
+      <label class="field grow"><span data-i18n="arr_label"></span>
+        <input class="input" id="arr-when" type="datetime-local" step="60">
+      </label>
+      <label class="check" style="align-items:center;padding-top:22px"><input type="checkbox" id="opt-ld" checked><span data-i18n="ld_only"></span></label>
+    </div>
+    <button class="btn primary" id="btn-find" type="button" data-i18n="find"></button>
+    <div class="msg" id="trains-msg" hidden></div>
+    <ul class="list" id="train-results"></ul>
+    <div class="row" id="train-more" hidden>
+      <button class="btn ghost grow" id="btn-earlier" type="button" data-i18n="earlier"></button>
+      <button class="btn ghost grow" id="btn-later" type="button" data-i18n="later"></button>
+    </div>
+  </section>
+
+  <section class="step" id="step-alarm" hidden>
+    <h2 data-i18n="step_alarm"></h2>
+    <div class="msg" id="trip-summary"></div>
+    <ul class="stops" id="trip-stops"></ul>
+    <label class="field"><span data-i18n="lead_label"></span>
+      <div class="lead">
+        <input type="range" id="lead" min="3" max="90" step="1" value="20" aria-describedby="lead-out">
+        <output id="lead-out" for="lead">20</output><span class="unit" data-i18n="min_before"></span>
+      </div>
+    </label>
+    <label class="check"><input type="checkbox" id="opt-wake" checked><span data-i18n="opt_wake"><small></small></span></label>
+    <label class="check"><input type="checkbox" id="opt-gps" checked><span data-i18n="opt_gps"><small></small></span></label>
+    <label class="check"><input type="checkbox" id="opt-audio" checked><span data-i18n="opt_audio"><small></small></span></label>
+    <label class="check"><input type="checkbox" id="opt-vibrate" checked><span data-i18n="opt_vibrate"><small></small></span></label>
+    <label class="check"><input type="checkbox" id="opt-push"><span data-i18n="opt_push"><small></small></span></label>
+    <div class="muted" id="push-na" style="font-size:13px;margin-top:-4px" hidden data-i18n="opt_push_na"></div>
+    <div class="row">
+      <button class="btn ghost" id="btn-test" type="button" data-i18n="test_alarm"></button>
+      <button class="btn primary big grow" id="btn-arm" type="button" data-i18n="arm"></button>
+    </div>
+    <div class="msg warn" id="arm-msg" hidden></div>
+  </section>
+
+  <details class="step" id="advanced">
+    <summary style="cursor:pointer;font:600 13px/1.2 var(--font-body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)" data-i18n="adv_title"></summary>
+    <label class="field"><span data-i18n="proxy_label"></span>
+      <input class="input mono" id="proxy-url" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://arrive-awake-oebb-proxy.<you>.workers.dev">
+    </label>
+    <div class="muted" style="font-size:13px" data-i18n="proxy_help"></div>
+  </details>
+
+  <footer>
+    <div data-i18n="foot_data"></div>
+    <div data-i18n="foot_bg"></div>
+  </footer>
+</div>
+
+<section class="armed" id="armed" hidden aria-live="polite">
+  <div class="inner">
+    <div class="train"><b id="a-train"></b><span class="muted" id="a-dest"></span></div>
+    <div class="dial">
+      <div class="label" data-i18n="alarm_at"></div>
+      <div class="alarm mono" id="a-alarm">--:--</div>
+      <div class="count" id="a-count"></div>
+    </div>
+    <div class="grid">
+      <div class="tile"><div class="k" data-i18n="eta"></div><div class="v" id="a-eta">--:--</div></div>
+      <div class="tile"><div class="k" data-i18n="delay"></div><div class="v" id="a-delay">–</div></div>
+      <div class="tile wide"><div class="k" data-i18n="position"></div><div class="v pos" id="a-pos" style="font:400 14px/1.45 var(--font-body)"></div></div>
+      <div class="tile wide" id="a-gps-tile" hidden><div class="k" data-i18n="gps_est"></div><div class="v" id="a-gps" style="font-size:18px"></div></div>
+    </div>
+    <div class="src" id="a-src"></div>
+    <div class="msg bad" id="a-warn" hidden></div>
+    <div class="msg" id="a-push-msg" hidden></div>
+    <div class="actions">
+      <button class="btn ghost" id="btn-refresh" type="button" data-i18n="refresh"></button>
+      <button class="btn ghost" id="btn-push-test" type="button" data-i18n="push_test" hidden></button>
+      <button class="btn danger" id="btn-disarm" type="button" data-i18n="disarm"></button>
+    </div>
+  </div>
+</section>
+
+<section class="ring" id="ring" hidden role="alertdialog" aria-modal="true">
+  <h2 id="ring-title"></h2>
+  <p id="ring-text"></p>
+  <button class="big" id="btn-awake" type="button" data-i18n="im_awake"></button>
+  <button class="snooze" id="btn-snooze" type="button" data-i18n="snooze"></button>
+</section>
+
+<audio id="alarm-audio" loop preload="auto" playsinline></audio>
+<audio id="keep-audio" loop preload="auto" playsinline></audio>
+
+<script>
+'use strict';
+/* ---------- i18n ---------- */
+const STR = {
+  en: {
+    tagline: 'An alarm that moves with your train.',
+    step_station: '1 · Where do you get off?',
+    dest_label: 'Destination station', dest_ph: 'e.g. Wien Hbf, Hamburg Hbf, Zürich HB',
+    step_time: '2 · Which train?', arr_label: 'Planned arrival (about)', ld_only: 'Long-distance only',
+    find: 'Find trains', earlier: '← Earlier', later: 'Later →', no_trains: 'No trains found around that time. Try another time or include regional trains.',
+    searching: 'Searching…', loading: 'Loading…',
+    step_alarm: '3 · Alarm', lead_label: 'Wake me before arrival', min_before: 'min before',
+    opt_wake: 'Keep screen on', opt_wake_s: 'Browsers pause pages when the screen is locked. Dim the screen and leave the phone face-down instead.',
+    opt_gps: 'Use GPS as a backup estimate', opt_gps_s: 'Where live data stops (e.g. ÖBB inside Austria), your position on the route gives an estimate of the real arrival.',
+    opt_audio: 'Silent audio keep-alive', opt_audio_s: 'Plays an inaudible loop so iOS keeps the page alive a bit longer. Costs some battery.',
+    opt_vibrate: 'Vibrate', opt_vibrate_s: 'Android only.',
+    test_alarm: 'Test sound', arm: 'Arm alarm', disarm: 'Disarm', refresh: 'Refresh',
+    alarm_at: 'Alarm at', eta: 'Expected arrival', delay: 'Delay', position: 'Train position', gps_est: 'GPS estimate',
+    im_awake: "I'm awake", snooze: 'Snooze 5 min',
+    ring_title: 'Time to get up', ring_text: 'Arrival in {dest} expected at {eta}.', ring_cancel_title: 'Check your train!', ring_cancel_text: 'Your stop {dest} is reported as cancelled. Check announcements now.',
+    ring_arrived: 'Arrival now', ring_arrived_text: 'The train should be arriving in {dest} now.',
+    live: 'Live data', sched_only: 'Schedule only, no live data for this train right now', gps_used: 'Live data missing or stale – using GPS estimate', gps_diff: 'GPS disagrees with live data by {n} min – using GPS',
+    updated: 'Updated {t} ago', never: 'not yet', stale: 'No fresh data for {n} min. Last known times are shown.', offline: 'No network. Using last known times.',
+    on_time: 'on time', plus_min: '+{n} min', minus_min: '−{n} min',
+    passed: 'Last stop passed: <b>{s}</b>', next: 'Next: <b>{s}</b> {t}', not_started: 'Not departed yet from <b>{s}</b>', at_dest: 'Arriving at destination',
+    sched_pos: '(from timetable)', gps_off_route: 'GPS fix is {d} km from the route, ignored', gps_wait: 'Waiting for a GPS fix…', gps_denied: 'Location permission denied',
+    sched: 'sched.', from_to: '{a} → {b}', in_count: 'in {t}', ago_count: '{t} ago',
+    arm_past: 'The alarm time is already in the past. It will ring right away.', arm_fail: 'Could not load this trip. Try another train.',
+    foot_data: 'Timetable and live data from Transitous (transitous.org), an open community routing service. Live delays are available where operators publish them (currently e.g. DB in Germany, SBB in Switzerland, not ÖBB in Austria). Attribution: OpenStreetMap contributors and the transit agencies listed at transitous.org/sources.',
+    foot_bg: 'This is a web app, not a system alarm: keep it in the foreground with the screen on. Night-train tip: install it to your home screen and put the phone on the charger.',
+    pick_station: 'Pick a station from the list first.', err_net: 'Request failed: {e}',
+    cancelled: 'cancelled', tz_note: 'Times shown in the station’s local time ({tz}).',
+    adv_title: 'Live data for Austria (ÖBB, WESTbahn, private railways)',
+    proxy_label: 'Your proxy URL', proxy_help: 'ÖBB publishes no open live feed. Deploy the small proxy from the proxy/ folder (free Cloudflare Worker) and paste its URL here. It reads live delays from the ÖBB Scotty backend for every operator in Austria and most cross-border trains.',
+    oebb_found: 'ÖBB live: train found ({n})', oebb_notfound: 'ÖBB live: train not found at this station', oebb_off: 'ÖBB live: no proxy configured', oebb_err: 'ÖBB live: proxy error ({e})',
+    live_src: 'Live data · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
+    opt_push: 'Server alarm when the screen is locked', opt_push_s: 'Your proxy server keeps watching the train and sends push notifications at alarm time, even while this page is frozen. Needs the proxy URL; on iPhone the app must be installed to the home screen.',
+    opt_push_na: 'Not available here: enter a proxy URL (and on iPhone install the app to the home screen).',
+    push_active: 'Server alarm active', push_pending: 'Registering server alarm…', push_err: 'Server alarm failed: {e}', push_test: 'Test push', push_test_ok: 'Test notification sent. Lock the phone and check that it arrived.', push_test_fail: 'Test push failed: {e}'
+  },
+  de: {
+    tagline: 'Ein Wecker, der mit dem Zug mitfährt.',
+    step_station: '1 · Wo steigst du aus?',
+    dest_label: 'Zielbahnhof', dest_ph: 'z. B. Wien Hbf, Hamburg Hbf, Zürich HB',
+    step_time: '2 · Welcher Zug?', arr_label: 'Geplante Ankunft (ungefähr)', ld_only: 'Nur Fernverkehr',
+    find: 'Züge suchen', earlier: '← Früher', later: 'Später →', no_trains: 'Keine Züge um diese Zeit gefunden. Andere Zeit wählen oder Nahverkehr einschließen.',
+    searching: 'Suche…', loading: 'Lade…',
+    step_alarm: '3 · Wecker', lead_label: 'Wecken vor Ankunft', min_before: 'Min vorher',
+    opt_wake: 'Bildschirm anlassen', opt_wake_s: 'Browser pausieren Seiten bei gesperrtem Bildschirm. Stattdessen Bildschirm dunkel drehen und Handy umgedreht hinlegen.',
+    opt_gps: 'GPS als Ersatz-Schätzung', opt_gps_s: 'Wo Echtzeitdaten fehlen (z. B. ÖBB in Österreich), schätzt die Position auf der Strecke die tatsächliche Ankunft.',
+    opt_audio: 'Stiller Audio-Keep-alive', opt_audio_s: 'Spielt eine unhörbare Schleife, damit iOS die Seite länger wach hält. Kostet etwas Akku.',
+    opt_vibrate: 'Vibrieren', opt_vibrate_s: 'Nur Android.',
+    test_alarm: 'Ton testen', arm: 'Wecker scharf stellen', disarm: 'Ausschalten', refresh: 'Aktualisieren',
+    alarm_at: 'Wecker um', eta: 'Erwartete Ankunft', delay: 'Verspätung', position: 'Zugposition', gps_est: 'GPS-Schätzung',
+    im_awake: 'Ich bin wach', snooze: '5 Min schlummern',
+    ring_title: 'Aufstehen!', ring_text: 'Ankunft in {dest} voraussichtlich um {eta}.', ring_cancel_title: 'Zug prüfen!', ring_cancel_text: 'Dein Halt {dest} wird als ausgefallen gemeldet. Jetzt Durchsagen beachten.',
+    ring_arrived: 'Ankunft jetzt', ring_arrived_text: 'Der Zug sollte jetzt in {dest} ankommen.',
+    live: 'Echtzeitdaten', sched_only: 'Nur Fahrplan, derzeit keine Echtzeitdaten für diesen Zug', gps_used: 'Echtzeit fehlt oder veraltet – GPS-Schätzung wird verwendet', gps_diff: 'GPS weicht {n} Min von den Echtzeitdaten ab – GPS wird verwendet',
+    updated: 'Aktualisiert vor {t}', never: 'noch nie', stale: 'Seit {n} Min keine frischen Daten. Letzte bekannte Zeiten werden angezeigt.', offline: 'Kein Netz. Letzte bekannte Zeiten.',
+    on_time: 'pünktlich', plus_min: '+{n} Min', minus_min: '−{n} Min',
+    passed: 'Letzter Halt: <b>{s}</b>', next: 'Nächster: <b>{s}</b> {t}', not_started: 'Noch nicht abgefahren in <b>{s}</b>', at_dest: 'Ankunft am Ziel',
+    sched_pos: '(laut Fahrplan)', gps_off_route: 'GPS-Position ist {d} km von der Strecke entfernt, ignoriert', gps_wait: 'Warte auf GPS…', gps_denied: 'Standortfreigabe verweigert',
+    sched: 'plan', from_to: '{a} → {b}', in_count: 'in {t}', ago_count: 'vor {t}',
+    arm_past: 'Die Weckzeit liegt bereits in der Vergangenheit. Der Wecker klingelt sofort.', arm_fail: 'Fahrt konnte nicht geladen werden. Anderen Zug wählen.',
+    foot_data: 'Fahrplan- und Echtzeitdaten von Transitous (transitous.org), einem offenen Community-Routingdienst. Verspätungen gibt es dort, wo Betreiber sie veröffentlichen (derzeit z. B. DB in Deutschland, SBB in der Schweiz, nicht ÖBB in Österreich). Quellen: OpenStreetMap-Mitwirkende und die Verkehrsunternehmen unter transitous.org/sources.',
+    foot_bg: 'Das ist eine Web-App, kein System-Wecker: im Vordergrund lassen, Bildschirm an. Nachtzug-Tipp: zum Homescreen hinzufügen und das Handy ans Ladekabel hängen.',
+    pick_station: 'Bitte zuerst einen Bahnhof aus der Liste wählen.', err_net: 'Anfrage fehlgeschlagen: {e}',
+    cancelled: 'fällt aus', tz_note: 'Zeiten in Ortszeit des Bahnhofs ({tz}).',
+    adv_title: 'Echtzeit für Österreich (ÖBB, WESTbahn, Privatbahnen)',
+    proxy_label: 'Deine Proxy-URL', proxy_help: 'Die ÖBB veröffentlichen keine offenen Echtzeitdaten. Den kleinen Proxy aus dem Ordner proxy/ (kostenloser Cloudflare Worker) ausrollen und die URL hier eintragen. Er liest Verspätungen aus dem ÖBB-Scotty-Backend für alle Betreiber in Österreich und die meisten grenzüberschreitenden Züge.',
+    oebb_found: 'ÖBB live: Zug gefunden ({n})', oebb_notfound: 'ÖBB live: Zug an diesem Bahnhof nicht gefunden', oebb_off: 'ÖBB live: kein Proxy eingetragen', oebb_err: 'ÖBB live: Proxy-Fehler ({e})',
+    live_src: 'Echtzeitdaten · {s}', src_oebb: 'ÖBB Scotty', src_transitous: 'Transitous',
+    opt_push: 'Server-Wecker bei gesperrtem Bildschirm', opt_push_s: 'Dein Proxy-Server beobachtet den Zug weiter und schickt zur Weckzeit Push-Benachrichtigungen, auch wenn diese Seite eingefroren ist. Braucht die Proxy-URL; am iPhone muss die App zum Homescreen hinzugefügt sein.',
+    opt_push_na: 'Hier nicht verfügbar: Proxy-URL eintragen (und am iPhone die App zum Homescreen hinzufügen).',
+    push_active: 'Server-Wecker aktiv', push_pending: 'Server-Wecker wird registriert…', push_err: 'Server-Wecker fehlgeschlagen: {e}', push_test: 'Test-Push', push_test_ok: 'Test-Benachrichtigung gesendet. Handy sperren und prüfen, ob sie ankommt.', push_test_fail: 'Test-Push fehlgeschlagen: {e}'
+  }
+};
+let lang = (()=>{ try{ const s=localStorage.getItem('aa.lang'); if(s) return s; }catch(e){} return /^de/i.test(navigator.language||'') ? 'de':'en'; })();
+const t = (k, vars={}) => (STR[lang][k] ?? STR.en[k] ?? k).replace(/\{(\w+)\}/g, (_,v)=> vars[v] ?? '');
+function applyLang(){
+  document.documentElement.lang = lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const k=el.dataset.i18n; const small=el.querySelector('small');
+    if(small){ el.firstChild.nodeType===3 ? el.firstChild.textContent=t(k) : el.insertBefore(document.createTextNode(t(k)), small); small.textContent=t(k+'_s'); }
+    else el.textContent=t(k);
+  });
+  document.querySelectorAll('[data-i18n-ph]').forEach(el=> el.placeholder=t(el.dataset.i18nPh));
+  document.querySelectorAll('.lang button').forEach(b=> b.setAttribute('aria-pressed', String(b.dataset.lang===lang)));
+  try{ localStorage.setItem('aa.lang', lang); }catch(e){}
+  if(state.station) showStationPicked();
+  renderTrains(); renderTripSummary(); if(armed) renderArmed();
+}
+document.querySelectorAll('.lang button').forEach(b=> b.addEventListener('click', ()=>{ lang=b.dataset.lang; applyLang(); }));
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const API = 'https://api.transitous.org/api/v1/';
+const LD_MODES = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL';
+const ALL_MODES = LD_MODES + ',REGIONAL_RAIL,RAIL,SUBURBAN';
+const RAIL_SET = new Set(['HIGHSPEED_RAIL','LONG_DISTANCE','NIGHT_RAIL','REGIONAL_RAIL','RAIL','SUBURBAN']);
+async function api(path, params){
+  const u = new URL(API + path); Object.entries(params).forEach(([k,v])=> v!==undefined && v!==null && u.searchParams.set(k, v));
+  const r = await fetch(u, {headers:{'Accept':'application/json'}});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  return r.json();
+}
+const locale = () => lang==='de' ? 'de-AT' : 'en-GB';
+function fmtTime(iso, tz){ if(!iso) return '--:--'; try{ return new Intl.DateTimeFormat(locale(), {hour:'2-digit',minute:'2-digit',timeZone:tz||undefined}).format(new Date(iso)); }catch(e){ return new Date(iso).toTimeString().slice(0,5); } }
+function fmtDate(iso, tz){ try{ return new Intl.DateTimeFormat(locale(), {weekday:'short',day:'numeric',month:'short',timeZone:tz||undefined}).format(new Date(iso)); }catch(e){ return ''; } }
+function fmtDur(ms){ const neg=ms<0; ms=Math.abs(ms); const m=Math.floor(ms/60000), h=Math.floor(m/60), s=Math.floor(ms/1000)%60; let out = h>0 ? `${h} h ${String(m%60).padStart(2,'0')} min` : m>0 ? `${m} min` : `${s} s`; return (neg?'−':'')+out; }
+function minsDiff(a,b){ return Math.round((new Date(a)-new Date(b))/60000); }
+function delayStr(min){ if(min===null||min===undefined||isNaN(min)) return '–'; if(Math.abs(min)<1) return t('on_time'); return min>0 ? t('plus_min',{n:min}) : t('minus_min',{n:-min}); }
+function toLocalInputValue(d){ const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }
+const norm = s => (s||'').toLowerCase().replace(/hauptbahnhof/g,'hbf').replace(/[^a-z0-9äöüß]/g,'');
+const digits = s => ((s||'').match(/\d{2,}/g)||[]).join('');
+function escapeHtml(s){ return String(s??'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function distKm(a,b){ if(![a?.lat,a?.lon,b?.lat,b?.lon].every(Number.isFinite)) return Infinity; const R=6371, dLat=(b.lat-a.lat)*Math.PI/180, dLon=(b.lon-a.lon)*Math.PI/180, x=dLon*Math.cos((a.lat+b.lat)/2*Math.PI/180); return R*Math.hypot(dLat,x); }
+
+/* ---------- optional ÖBB live proxy (see proxy/worker.js) ---------- */
+const DEFAULT_PROXY = 'https://arrive-awake-oebb-proxy.arrive-awake-oebb-proxy.workers.dev';   // the deployed backend (proxy/worker.js); can be changed under "Live data for Austria"
+let proxyUrl = (()=>{ try{ const v=localStorage.getItem('aa.proxy'); return v===null ? DEFAULT_PROXY : v; }catch(e){ return DEFAULT_PROXY; } })();
+async function proxyApi(path, params, method='GET', body){
+  const u = new URL(proxyUrl.replace(/\/+$/,'') + '/' + path); Object.entries(params||{}).forEach(([k,v])=> v!==undefined && v!==null && u.searchParams.set(k, v));
+  const r = await fetch(u, body ? {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)} : {method}); const d = await r.json().catch(()=>null);
+  if(!r.ok || (d && d.error)) throw new Error(d?.error || ('HTTP '+r.status));
+  return d;
+}
+/* ---------- server-side alarm via Web Push (see proxy/worker.js) ---------- */
+const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
+function b64ToU8(s){ const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'=')); return Uint8Array.from(b, c=>c.charCodeAt(0)); }
+function alarmBody(){ return { id: armed.alarmId, lead: armed.lead, lang, station: armed.station, scheduledArrival: armed.scheduledArrival, names: armed.names, from: armed.from, oebb: armed.oebb||null, snoozeUntil: armed.snoozeUntil||0,
+  members: armed.members.map(m=>({tripId:m.tripId, stopId:m.stopId, parentId:m.parentId, scheduledArrival:m.scheduledArrival, name:m.name})) }; }
+async function setupPush(){
+  if(!armed || !armed.opts.push || !proxyUrl) return;
+  armed.pushState='pending'; renderArmed();
+  try{
+    if(Notification.permission!=='granted') throw new Error(lang==='de' ? 'Benachrichtigungen nicht erlaubt' : 'notifications not allowed');
+    const reg = await navigator.serviceWorker.ready;
+    const v = await proxyApi('vapid');
+    if(!v.push || !v.publicKey) throw new Error(lang==='de' ? 'Server hat keine Push-Konfiguration' : 'server has no push configuration');
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(v.publicKey)});
+    armed.alarmId = armed.alarmId || (crypto.randomUUID ? crypto.randomUUID() : 'a'+Date.now()+Math.random().toString(36).slice(2));
+    const r = await proxyApi('alarm', {}, 'POST', {...alarmBody(), subscription: sub.toJSON()});
+    armed.alarmId = r.id; armed.pushState='active'; armed.pushError=null; save();
+  }catch(e){ armed.pushState='error'; armed.pushError=e.message; save(); }
+  renderArmed();
+}
+function pushCall(path, params){ if(armed?.alarmId && proxyUrl) return proxyApi(path, {id:armed.alarmId, ...params}, path==='alarm' ? 'DELETE' : 'POST').catch(()=>{}); }
+/* Find the same train in the ÖBB system: stations near the chosen one, then an arrival with the same train number / time. */
+async function resolveOebb(ctx){
+  if(!proxyUrl) return null;
+  const locs = await proxyApi('locations', {q: ctx.station.name});
+  let cands = locs.filter(l=> distKm(l, ctx.station) < 1.5).slice(0,3);
+  if(!cands.length && locs.length) cands = [locs[0]];
+  const nums = new Set(ctx.names.map(digits).filter(Boolean));
+  for(const l of cands){
+    const arr = await proxyApi('arrivals', {station:l.id, when:new Date(new Date(ctx.scheduledArrival).getTime()-30*60000).toISOString(), duration:90});
+    const hit = arr.find(a=> Math.abs(minsDiff(a.scheduledArrival, ctx.scheduledArrival))<=1 && (nums.has(String(a.number)) || nums.has(digits(a.name)) || (ctx.from && norm(a.origin)===norm(ctx.from))));
+    if(hit) return {tripId:hit.tripId, stationId:l.id, name:hit.name};
+  }
+  return null;
+}
+function oebbInfo(td, ctx){
+  const stops = (td.stops||[]).map(s=>({name:s.name, stopId:s.id, lat:s.lat, lon:s.lon, schedArr:s.schedArr, realArr:s.realArr, schedDep:s.schedDep, realDep:s.realDep, cancelled:!!s.cancelled}));
+  let idx = stops.findIndex(s=> s.schedArr && Math.abs(minsDiff(s.schedArr, ctx.scheduledArrival))<=1 && distKm(s, ctx.station)<2);
+  if(idx<0) idx = stops.findIndex(s=> s.schedArr && Math.abs(minsDiff(s.schedArr, ctx.scheduledArrival))<=1);
+  if(idx<0) return null;
+  const dest=stops[idx];
+  return { source:'oebb', stops, destIdx:idx, name:td.name, realTime:!!td.realTime, cancelled:!!(td.cancelled||dest.cancelled), schedArr:dest.schedArr, realArr:dest.realArr||dest.schedArr };
+}
+
+/* ---------- state ---------- */
+const state = { station:null, groups:[], selected:null, cursors:{}, tripPreview:null };
+let armed = null;          // persisted armed configuration
+let live = null;           // last computed live info
+let pollTimer = null, tickTimer = null, wakeLock = null, geoWatch = null, gps = null, lastFetchOk = 0, lastFetchErr = null, ringing=false, snoozeUntil=0, rangTripArrival=false;
+
+/* ---------- station search ---------- */
+let stTimer = null;
+$('station-q').addEventListener('input', e=>{
+  clearTimeout(stTimer); const q=e.target.value.trim();
+  $('station-picked').hidden = true; state.station=null; $('step-time').hidden=true; $('step-alarm').hidden=true;
+  if(q.length<2){ $('station-results').innerHTML=''; return; }
+  stTimer = setTimeout(()=> searchStations(q), 300);
+});
+async function searchStations(q){
+  const ul=$('station-results'); ul.innerHTML = `<li class="muted" style="padding:6px 2px">${t('searching')}</li>`;
+  try{
+    const res = await api('geocode', {text:q, type:'STOP', language:lang});
+    const seen=new Set(); const items=[];
+    for(const r of res){
+      if(!(r.modes||[]).some(m=>RAIL_SET.has(m))) continue;
+      const key=norm(r.name)+'|'+(r.country||''); if(seen.has(key)) continue; seen.add(key);
+      items.push(r); if(items.length>=8) break;
+    }
+    ul.innerHTML = items.length ? '' : `<li class="muted" style="padding:6px 2px">${t('no_trains')}</li>`;
+    items.forEach(r=>{
+      const li=document.createElement('li'); const b=document.createElement('button'); b.type='button';
+      const area=(r.areas||[]).find(a=>a.default)?.name || '';
+      b.innerHTML = `<span class="country mono">${escapeHtml(r.country||'')}</span><span class="name">${escapeHtml(r.name)}</span><span></span><span class="sub">${escapeHtml(area)} · ${(r.modes||[]).filter(m=>RAIL_SET.has(m)).map(m=>m.replace('_RAIL','').replace('_',' ').toLowerCase()).join(', ')}</span>`;
+      b.addEventListener('click', ()=> pickStation(r));
+      li.appendChild(b); ul.appendChild(li);
+    });
+  }catch(e){ ul.innerHTML = `<li class="msg bad">${escapeHtml(t('err_net',{e:e.message}))}</li>`; }
+}
+function pickStation(r){
+  state.station = {id:r.id, name:r.name, tz:r.tz, country:r.country, lat:r.lat, lon:r.lon};
+  $('station-results').innerHTML=''; $('station-q').value=r.name; showStationPicked();
+  $('step-time').hidden=false; $('step-alarm').hidden=true; state.groups=[]; state.selected=null; renderTrains();
+  if(!$('arr-when').value){ const d=new Date(); d.setSeconds(0,0); if(d.getHours()>=14){ d.setDate(d.getDate()+1); d.setHours(6,30,0,0);} $('arr-when').value = toLocalInputValue(d); }
+  $('arr-when').focus();
+}
+function showStationPicked(){ const s=state.station; $('station-picked').hidden=false; $('station-picked').innerHTML = `<b>${escapeHtml(s.name)}</b> <span class="muted mono">${escapeHtml(s.country||'')}</span><br><span class="muted">${escapeHtml(t('tz_note',{tz:s.tz||'local'}))}</span>`; }
+
+/* ---------- train search ---------- */
+$('btn-find').addEventListener('click', ()=> findTrains());
+$('btn-later').addEventListener('click', ()=> findTrains(state.cursors.next));
+$('btn-earlier').addEventListener('click', ()=> findTrains(state.cursors.prev));
+async function findTrains(cursor){
+  if(!state.station){ $('trains-msg').hidden=false; $('trains-msg').textContent=t('pick_station'); return; }
+  const whenVal=$('arr-when').value; const when = whenVal ? new Date(whenVal) : new Date();
+  const modes = $('opt-ld').checked ? LD_MODES : ALL_MODES;
+  $('trains-msg').hidden=false; $('trains-msg').className='msg'; $('trains-msg').textContent=t('loading'); $('train-more').hidden=true;
+  try{
+    const params = {stopId: state.station.id, arriveBy:'true', n: 25, mode: modes};
+    if(cursor) params.pageCursor = cursor; else { params.time = new Date(when.getTime()-40*60000).toISOString(); params.direction='LATER'; }
+    const res = await api('stoptimes', params);
+    state.cursors = {next: res.nextPageCursor, prev: res.previousPageCursor};
+    state.groups = groupTrains(res.stopTimes||[]);
+    state.selected=null; $('step-alarm').hidden=true;
+    $('trains-msg').hidden = state.groups.length>0; $('trains-msg').textContent = t('no_trains');
+    $('train-more').hidden = false;
+    renderTrains();
+  }catch(e){ $('trains-msg').hidden=false; $('trains-msg').className='msg bad'; $('trains-msg').textContent=t('err_net',{e:e.message}); }
+}
+function groupTrains(stopTimes){
+  const groups=[];
+  for(const s of stopTimes){
+    const p=s.place; const arr=p.scheduledArrival||p.scheduledDeparture; if(!arr) continue;
+    const member = {tripId:s.tripId, name:s.displayName||s.routeShortName||'', from:s.tripFrom?.name||'', to:s.tripTo?.name||s.headsign||'', stopId:p.stopId, parentId:p.parentId, scheduledArrival:arr, arrival:p.arrival||arr, realTime:!!s.realTime, cancelled:!!(s.cancelled||s.tripCancelled||p.cancelled), mode:s.mode, agency:s.agencyName||'', tz:p.tz, source:(s.tripId.split('_')[2]||'').split('-').slice(0,2).join('-')};
+    let g = groups.find(g=> g.scheduledArrival===arr && (norm(g.to)===norm(member.to) || norm(g.from)===norm(member.from) || (digits(g.name) && digits(g.name)===digits(member.name))));
+    if(!g){ g={scheduledArrival:arr, arrival:member.arrival, name:member.name, from:member.from, to:member.to, mode:member.mode, tz:member.tz, members:[], names:new Set(), realTime:false, cancelled:false}; groups.push(g); }
+    g.members.push(member); if(member.name) g.names.add(member.name);
+    if(member.realTime){ g.realTime=true; g.arrival=member.arrival; }
+    if(member.cancelled && g.members.every(m=>m.cancelled)) g.cancelled=true; else if(!member.cancelled) g.cancelled=false;
+    if(member.mode==='NIGHT_RAIL' || /^(NJ|EN|D)\b/.test(member.name)) g.mode='NIGHT_RAIL';
+    if(!/\d/.test(g.name) && /\d/.test(member.name)) g.name=member.name;
+    if(g.from.length < member.from.length && !/\d/.test(member.name)) {} // keep first
+  }
+  groups.sort((a,b)=> new Date(a.scheduledArrival)-new Date(b.scheduledArrival));
+  return groups;
+}
+function renderTrains(){
+  const ul=$('train-results'); ul.innerHTML='';
+  const tz=state.station?.tz;
+  state.groups.forEach((g,i)=>{
+    const li=document.createElement('li'); const b=document.createElement('button'); b.type='button'; b.setAttribute('aria-selected', String(state.selected===g));
+    const names=[...g.names].filter(n=>/\d/.test(n)); const label = (names.length?names:[...g.names]).slice(0,3).join(' / ') || '?';
+    const delay = g.realTime ? minsDiff(g.arrival, g.scheduledArrival) : null;
+    const pills = [g.mode==='NIGHT_RAIL' ? `<span class="pill night">night</span>`:'', g.realTime ? `<span class="pill live">${delay? delayStr(delay):'live'}</span>` : '', g.cancelled ? `<span class="pill cancel">${t('cancelled')}</span>`:''].join(' ');
+    b.innerHTML = `<span class="time">${fmtTime(g.scheduledArrival,tz)}</span><span class="name">${escapeHtml(label)}</span><span>${pills}</span><span class="sub">${escapeHtml(t('from_to',{a:g.from,b:g.to}))} · ${fmtDate(g.scheduledArrival,tz)}</span>`;
+    b.addEventListener('click', ()=> selectTrain(g));
+    li.appendChild(b); ul.appendChild(li);
+  });
+}
+async function selectTrain(g){
+  state.selected=g; renderTrains(); $('step-alarm').hidden=false; $('arm-msg').hidden=true;
+  $('trip-summary').textContent=t('loading'); $('trip-stops').innerHTML='';
+  try{ const ctx=ctxOf(g, state.station); lastOebbTry=0; state.tripPreview = await loadTripInfo(ctx); g.oebb=ctx.oebb; g.oebbStatus=ctx.oebbStatus; g.oebbError=ctx.oebbError; renderTripSummary(); }
+  catch(e){ state.tripPreview=null; $('trip-summary').textContent=t('arm_fail')+' ('+e.message+')'; }
+  $('step-alarm').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function renderTripSummary(){
+  if(!state.selected) return; const g=state.selected, info=state.tripPreview; const tz=g.tz||state.station?.tz;
+  const names=[...g.names].join(' / ');
+  let html = `<b>${escapeHtml(names)}</b> · ${escapeHtml(t('from_to',{a:g.from,b:g.to}))}<br>` + `<span class="muted">${escapeHtml(state.station.name)} · ${t('sched')} ${fmtTime(g.scheduledArrival,tz)} · ${fmtDate(g.scheduledArrival,tz)}</span>`;
+  if(info){ html += `<br><span class="${info.realTime?'ok-txt':'muted'}">${escapeHtml(info.realTime ? t('live_src',{s:t(info.source==='oebb'?'src_oebb':'src_transitous')}) : t('sched_only'))}</span>`; }
+  const os = !proxyUrl ? t('oebb_off') : g.oebbStatus==='found' ? t('oebb_found',{n:g.oebb?.name||''}) : g.oebbStatus==='error' ? t('oebb_err',{e:g.oebbError||''}) : g.oebbStatus==='notfound' ? t('oebb_notfound') : '';
+  if(os) html += `<br><span class="muted">${escapeHtml(os)}</span>`;
+  $('trip-summary').innerHTML = html;
+  const ul=$('trip-stops'); ul.innerHTML='';
+  if(info){ info.stops.forEach((s,i)=>{ const li=document.createElement('li'); if(i===info.destIdx) li.className='dest'; const d = s.realArr && s.schedArr ? minsDiff(s.realArr, s.schedArr) : null; li.innerHTML = `<span class="t">${fmtTime(s.schedArr||s.schedDep, s.tz||tz)}</span><span>${escapeHtml(s.name)}</span>${d? `<span class="d">${delayStr(d)}</span>`:''}`; ul.appendChild(li); }); }
+}
+
+/* ---------- trip loading & ETA logic ---------- */
+/* ctx = {members, station, scheduledArrival, from, names, oebb} — shared by the preview (selected group) and the armed state */
+function ctxOf(g, station){ return {members:g.members, station, scheduledArrival:g.scheduledArrival, from:g.from, names:[...(g.names instanceof Set ? g.names : g.names||[])], oebb:g.oebb}; }
+let lastOebbTry = 0;
+async function loadTripInfo(ctx){
+  const jobs = ctx.members.map(m=> api('trip', {tripId:m.tripId}).then(trip=> extractInfo(trip, m)));
+  // ÖBB proxy: resolve the train once (retry every 10 min while not found), then poll its journey details
+  if(proxyUrl){
+    jobs.push((async ()=>{
+      if(!ctx.oebb && Date.now()-lastOebbTry > 10*60e3){ lastOebbTry=Date.now(); ctx.oebbStatus='searching'; ctx.oebb = await resolveOebb(ctx); ctx.oebbStatus = ctx.oebb ? 'found' : 'notfound'; }
+      if(!ctx.oebb) return null;
+      const td = await proxyApi('trip', {id: ctx.oebb.tripId}); return oebbInfo(td, ctx);
+    })().catch(e=>{ ctx.oebbStatus='error'; ctx.oebbError=e.message; throw e; }));
+  }
+  const results = await Promise.allSettled(jobs);
+  const infos=[]; let lastErr=null;
+  results.forEach(r=>{ if(r.status==='fulfilled'){ if(r.value) infos.push(r.value); } else lastErr=r.reason; });
+  if(!infos.length) throw lastErr || new Error('no trip data');
+  const preferOebb = (ctx.station?.country||'') === 'AT';
+  const score = i => (i.realTime && !i.cancelled ? 4 : 0) + (!i.cancelled ? 2 : 0) + ((i.source==='oebb') === preferOebb ? 1 : 0);
+  infos.sort((a,b)=> score(b)-score(a));
+  infos[0].alternatives = infos.slice(1);
+  return infos[0];
+}
+function extractInfo(trip, m){
+  const legs = (trip.legs||[]).filter(l=> l.tripId); if(!legs.length) return null;
+  for(const leg of legs){
+    const stops = [leg.from, ...(leg.intermediateStops||[]), leg.to].filter(Boolean).map(p=>({ name:p.name, stopId:p.stopId, parentId:p.parentId, lat:p.lat, lon:p.lon, tz:p.tz, schedArr:p.scheduledArrival||null, realArr:p.arrival||null, schedDep:p.scheduledDeparture||null, realDep:p.departure||null, cancelled:!!p.cancelled }));
+    let idx = stops.findIndex(s=> (m.stopId && s.stopId===m.stopId) || (m.parentId && s.parentId && s.parentId===m.parentId));
+    if(idx<0) idx = stops.findIndex(s=> norm(s.name)===norm(state.station?.name||armed?.station?.name) && Math.abs(minsDiff(s.schedArr||s.schedDep, m.scheduledArrival))<=2);
+    if(idx<0) idx = stops.findIndex(s=> s.schedArr===m.scheduledArrival || s.schedDep===m.scheduledArrival);
+    if(idx<0) continue;
+    const dest=stops[idx];
+    return { source:'transitous', member:m, stops, destIdx:idx, name:leg.displayName||leg.routeShortName||m.name, realTime:!!leg.realTime, cancelled:!!(leg.cancelled||dest.cancelled), schedArr:dest.schedArr||dest.schedDep, realArr:dest.realArr||dest.realDep||dest.schedArr||dest.schedDep };
+  }
+  return null;
+}
+function positionFromTimes(info, now){
+  // last stop with (realtime) departure <= now
+  let last=-1;
+  info.stops.forEach((s,i)=>{ const dep = s.realDep||s.schedDep||s.realArr||s.schedArr; if(dep && new Date(dep)<=now) last=i; });
+  return last;
+}
+/* GPS: project the phone's position onto the polyline of stops; interpolate the scheduled time at that point. */
+function gpsEstimate(info, pos, now){
+  const pts = info.stops.filter(s=> isFinite(s.lat)&&isFinite(s.lon));
+  if(pts.length<2) return null;
+  const R=6371, lat0=pos.lat*Math.PI/180, kx=R*Math.cos(lat0)*Math.PI/180, ky=R*Math.PI/180;
+  const P={x:pos.lon*kx, y:pos.lat*ky};
+  let best=null;
+  for(let i=0;i<pts.length-1;i++){
+    const A={x:pts[i].lon*kx,y:pts[i].lat*ky}, B={x:pts[i+1].lon*kx,y:pts[i+1].lat*ky};
+    const dx=B.x-A.x, dy=B.y-A.y, L2=dx*dx+dy*dy; if(L2===0) continue;
+    let f=((P.x-A.x)*dx+(P.y-A.y)*dy)/L2; f=Math.max(0,Math.min(1,f));
+    const X={x:A.x+f*dx,y:A.y+f*dy}; const d=Math.hypot(P.x-X.x,P.y-X.y);
+    if(!best || d<best.d) best={i,f,d};
+  }
+  if(!best) return null;
+  const a=pts[best.i], b=pts[best.i+1];
+  const tA=new Date(a.schedDep||a.schedArr), tB=new Date(b.schedArr||b.schedDep);
+  const tPos = tA.getTime() + best.f*(tB-tA);                   // scheduled clock at this point of the route
+  const destSched = new Date(info.schedArr).getTime();
+  const remaining = destSched - tPos;                             // scheduled time still needed to reach the destination
+  const destIdxInPts = pts.indexOf(info.stops[info.destIdx]);
+  const ahead = destIdxInPts > best.i || (destIdxInPts===best.i+1);
+  return { eta: new Date(now.getTime()+Math.max(0,remaining)).toISOString(), distKm:best.d, segFrom:a.name, segTo:b.name, ahead, remaining };
+}
+function computeLive(info, now){
+  const schedEta = info.schedArr; const rtEta = info.realArr;
+  let eta = info.realTime ? rtEta : schedEta, basis = info.realTime ? 'live' : 'schedule', note='';
+  let g=null;
+  if(armed?.opts?.gps && gps && gps.fix && (now - gps.fix.time) < 10*60000){
+    g = gpsEstimate(info, gps.fix, now);
+    if(g && g.distKm>3){ g.ignored=true; }
+    else if(g && g.ahead && g.remaining>0){
+      const diff = minsDiff(g.eta, eta);
+      if(basis==='schedule'){ eta=g.eta; basis='gps'; note=t('gps_used'); }
+      else if(Math.abs(diff)>=5){ eta=g.eta; basis='gps'; note=t('gps_diff',{n:Math.abs(diff)}); }
+    }
+  }
+  const delay = minsDiff(eta, schedEta);
+  const alarmAt = new Date(new Date(eta).getTime() - armed.lead*60000);
+  return { eta, schedEta, rtEta, delay, alarmAt, basis, note, gps:g, posIdx: positionFromTimes(info, now) };
+}
+
+/* ---------- arming ---------- */
+$('lead').addEventListener('input', e=> $('lead-out').value=e.target.value);
+$('btn-test').addEventListener('click', async ()=>{ await unlockAudio(); startAlarmSound(); if(navigator.vibrate && $('opt-vibrate').checked) navigator.vibrate([400,200,400]); setTimeout(stopAlarmSound, 2500); });
+$('btn-arm').addEventListener('click', async ()=>{
+  if(!state.selected || !state.tripPreview){ $('arm-msg').hidden=false; $('arm-msg').textContent=t('arm_fail'); return; }
+  const g=state.selected;
+  const wantPush = $('opt-push').checked && !$('opt-push').disabled;
+  // permission prompts must stay inside the click gesture (iOS): ask first, unlock audio after
+  if('Notification' in window && Notification.permission==='default'){ try{ await Notification.requestPermission(); }catch(e){} }
+  armed = { station: state.station, members: g.members, names:[...g.names], from:g.from, to:g.to, scheduledArrival:g.scheduledArrival, tz:g.tz||state.station.tz, lead:+$('lead').value, oebb:g.oebb||null,
+            opts:{wake:$('opt-wake').checked, gps:$('opt-gps').checked, audio:$('opt-audio').checked, vibrate:$('opt-vibrate').checked, push:wantPush}, armedAt:Date.now() };
+  save();
+  await unlockAudio();
+  startArmed(state.tripPreview);
+  setupPush();
+});
+function updatePushOption(){
+  const ok = pushSupported() && !!proxyUrl;
+  $('opt-push').disabled = !ok; $('push-na').hidden = ok;
+  if(!ok) $('opt-push').checked=false; else if(!$('opt-push').dataset.touched) $('opt-push').checked=true;
+}
+$('opt-push').addEventListener('change', e=> e.target.dataset.touched='1');
+$('btn-push-test').addEventListener('click', async ()=>{
+  const m=$('a-push-msg'); m.hidden=false; m.className='msg'; m.textContent='…';
+  try{ const r = await proxyApi('alarm/test', {id:armed.alarmId}, 'POST'); if(!r.ok) throw new Error(r.result||'?'); m.textContent=t('push_test_ok'); }
+  catch(e){ m.className='msg bad'; m.textContent=t('push_test_fail',{e:e.message}); }
+});
+navigator.serviceWorker?.addEventListener('message', e=>{
+  const d=e.data; if(d?.type!=='push' || !armed || ringing) return;
+  const k = d.data?.kind; if(k==='test') return;
+  if(Date.now() < snoozeUntil) return;
+  ring(k==='cancel' ? 'cancel' : k==='arrived' ? 'arrived' : 'wake');
+});
+function save(){ try{ armed ? localStorage.setItem('aa.armed', JSON.stringify(armed)) : localStorage.removeItem('aa.armed'); }catch(e){} }
+function startArmed(initialInfo){
+  rangTripArrival=false; snoozeUntil=armed.snoozeUntil||0; ringing=false;
+  $('setup').hidden=true; $('armed').hidden=false; document.querySelector('meta[name=theme-color]').content='#000000';
+  live = initialInfo ? {info:initialInfo} : null;
+  if(armed.opts.wake) requestWakeLock();
+  if(armed.opts.audio) startKeepAlive();
+  if(armed.opts.gps) startGps();
+  document.addEventListener('visibilitychange', onVisible);
+  schedulePoll(0); clearInterval(tickTimer); tickTimer=setInterval(tick, 1000);
+}
+function stopArmed(){
+  pushCall('alarm');                                   // DELETE the server-side alarm (fire and forget)
+  clearTimeout(pollTimer); clearInterval(tickTimer); pollTimer=tickTimer=null;
+  stopAlarmSound(); stopKeepAlive(); releaseWakeLock(); stopGps();
+  document.removeEventListener('visibilitychange', onVisible);
+  armed=null; live=null; save(); ringing=false;
+  $('ring').hidden=true; $('armed').hidden=true; $('setup').hidden=false; document.querySelector('meta[name=theme-color]').content='#0b0c10';
+}
+$('btn-disarm').addEventListener('click', stopArmed);
+$('btn-refresh').addEventListener('click', ()=> schedulePoll(0));
+function onVisible(){ if(document.visibilityState==='visible'){ if(armed?.opts.wake) requestWakeLock(); schedulePoll(0); tick(); } }
+
+function schedulePoll(delayMs){
+  clearTimeout(pollTimer);
+  pollTimer = setTimeout(async ()=>{
+    await poll();
+    if(!armed) return;
+    const msToAlarm = live?.calc ? live.calc.alarmAt - Date.now() : 0;
+    const next = msToAlarm > 3*3600e3 ? 10*60e3 : msToAlarm > 60*60e3 ? 5*60e3 : msToAlarm > 20*60e3 ? 2*60e3 : 60e3;
+    schedulePoll(next);
+  }, delayMs);
+}
+async function poll(){
+  if(!armed) return;
+  try{
+    const hadOebb = !!armed.oebb;
+    const info = await loadTripInfo(armed);     // armed has the same shape as ctx; a found ÖBB train is stored on it
+    if(!hadOebb && armed.oebb){ save(); if(armed.pushState==='active') setupPush(); }   // tell the server about the ÖBB match
+    live = {info}; lastFetchOk=Date.now(); lastFetchErr=null;
+  }catch(e){ lastFetchErr=e; }
+  tick();
+}
+function tick(){
+  if(!armed) return;
+  const now=new Date();
+  if(live?.info){ live.calc = computeLive(live.info, now); }
+  renderArmed();
+  if(!live?.calc) return;
+  const c=live.calc;
+  if(!ringing && now >= snoozeUntil){
+    if(live.info.cancelled){ ring('cancel'); }
+    else if(now >= c.alarmAt){ ring('wake'); }
+  }
+  // second safety ring when arrival itself is reached (if first was snoozed away)
+  if(!ringing && !rangTripArrival && now >= new Date(c.eta) && now >= snoozeUntil && snoozeUntil>0){ rangTripArrival=true; ring('arrived'); }
+}
+function renderArmed(){
+  if(!armed) return;
+  const tz=armed.tz;
+  $('a-train').textContent = armed.names.join(' / ');
+  $('a-dest').textContent = armed.station.name;
+  const c=live?.calc;
+  if(!c){ $('a-alarm').textContent='--:--'; $('a-count').textContent=t('loading'); $('a-eta').textContent='--:--'; $('a-delay').textContent='–'; $('a-pos').textContent=''; renderSrc(); return; }
+  $('a-alarm').textContent = fmtTime(c.alarmAt.toISOString(), tz);
+  const ms = c.alarmAt - Date.now();
+  $('a-count').textContent = ms>0 ? t('in_count',{t:fmtDur(ms)}) : t('ago_count',{t:fmtDur(-ms)});
+  $('a-eta').innerHTML = `${fmtTime(c.eta,tz)} <small>${t('sched')} ${fmtTime(c.schedEta,tz)}</small>`;
+  $('a-delay').textContent = delayStr(c.delay);
+  $('a-delay').className = 'v ' + (c.delay>=5 ? 'warn-txt' : c.delay<=-1 ? 'ok-txt' : '');
+  const info=live.info, i=c.posIdx;
+  let pos;
+  if(i<0) pos = t('not_started',{s:escapeHtml(info.stops[0].name)});
+  else if(i>=info.destIdx) pos = t('at_dest');
+  else { const n=info.stops[i+1]; pos = t('passed',{s:escapeHtml(info.stops[i].name)}) + '<br>' + t('next',{s:escapeHtml(n.name), t:fmtTime(n.realArr||n.schedArr, n.tz||tz)}); }
+  if(!info.realTime) pos += ` <span class="muted">${t('sched_pos')}</span>`;
+  $('a-pos').innerHTML = pos;
+  const gt=$('a-gps-tile');
+  if(armed.opts.gps){
+    gt.hidden=false;
+    if(gps?.error) $('a-gps').textContent = t('gps_denied');
+    else if(!gps?.fix) $('a-gps').textContent = t('gps_wait');
+    else if(c.gps?.ignored) $('a-gps').textContent = t('gps_off_route',{d:c.gps.distKm.toFixed(1)});
+    else if(c.gps) $('a-gps').innerHTML = `${fmtTime(c.gps.eta,tz)} <small>${escapeHtml(c.gps.segFrom)} → ${escapeHtml(c.gps.segTo)} · ±${c.gps.distKm.toFixed(1)} km</small>`;
+    else $('a-gps').textContent = '–';
+  } else gt.hidden=true;
+  renderSrc();
+}
+function renderSrc(){
+  const c=live?.calc; const parts=[];
+  const age = lastFetchOk ? Date.now()-lastFetchOk : null;
+  const dotCls = !lastFetchOk ? 'warn' : age>15*60e3 ? 'bad' : (c?.basis==='live' ? 'ok' : 'warn');
+  parts.push(`<span class="dot ${dotCls}"></span>`);
+  if(c) parts.push(`<span>${escapeHtml(c.basis==='live' ? t('live_src',{s:t(live.info.source==='oebb'?'src_oebb':'src_transitous')}) : c.basis==='gps' ? c.note : t('sched_only'))}</span>`);
+  parts.push(`<span class="mono">${escapeHtml(t('updated',{t: age===null ? t('never') : fmtDur(age)}))}</span>`);
+  if(armed.opts.push){ const ps=armed.pushState; parts.push(`<span class="${ps==='active'?'ok-txt':ps==='error'?'bad-txt':''}">${escapeHtml(ps==='active' ? t('push_active') : ps==='error' ? t('push_err',{e:armed.pushError||''}) : t('push_pending'))}</span>`); }
+  $('btn-push-test').hidden = !(armed.opts.push && armed.pushState==='active');
+  $('a-src').innerHTML = parts.join(' · ');
+  const w=$('a-warn');
+  if(lastFetchErr && lastFetchOk && age>15*60e3){ w.hidden=false; w.textContent = t('stale',{n:Math.round(age/60000)}); }
+  else if(lastFetchErr && !navigator.onLine){ w.hidden=false; w.textContent=t('offline'); }
+  else if(lastFetchErr && !lastFetchOk){ w.hidden=false; w.textContent=t('err_net',{e:lastFetchErr.message}); }
+  else w.hidden=true;
+}
+
+/* ---------- ringing ---------- */
+function ring(kind){
+  ringing=true; const dest=armed.station.name; const eta=fmtTime(live?.calc?.eta, armed.tz);
+  const title = kind==='cancel' ? t('ring_cancel_title') : kind==='arrived' ? t('ring_arrived') : t('ring_title');
+  const text = kind==='cancel' ? t('ring_cancel_text',{dest}) : kind==='arrived' ? t('ring_arrived_text',{dest}) : t('ring_text',{dest, eta});
+  $('ring-title').textContent=title; $('ring-text').textContent=text; $('ring').hidden=false;
+  startAlarmSound();
+  if(armed.opts.vibrate && navigator.vibrate){ try{ navigator.vibrate([800,300,800,300,800,300,800,300,800,300,800]); }catch(e){} }
+  notify(title, text);
+}
+$('btn-awake').addEventListener('click', ()=>{ stopArmed(); });
+$('btn-snooze').addEventListener('click', ()=>{ stopAlarmSound(); if(navigator.vibrate) navigator.vibrate(0); ringing=false; snoozeUntil = Date.now()+5*60000; armed.snoozeUntil=snoozeUntil; save(); pushCall('alarm/snooze', {until:snoozeUntil}); $('ring').hidden=true; tick(); });
+async function notify(title, body){
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  try{ const reg = await navigator.serviceWorker?.getRegistration(); if(reg) return reg.showNotification(title,{body, tag:'arrive-awake', requireInteraction:true, renotify:true, vibrate:[500,200,500]}); }catch(e){}
+  try{ new Notification(title,{body, tag:'arrive-awake', requireInteraction:true}); }catch(e){}
+}
+
+/* ---------- audio (generated WAV, played through <audio> so iOS mute switch does not silence it) ---------- */
+function makeWav(seconds, gen){
+  const sr=22050, n=Math.floor(sr*seconds), buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i));};
+  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,gen(i/sr))); v.setInt16(44+i*2, s*32767, true); }
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+}
+const alarmAudio=$('alarm-audio'), keepAudio=$('keep-audio');
+alarmAudio.src = makeWav(2.0, tt=>{ const beat=tt%0.5; const on = beat<0.22 && (tt<1.5); const env = on ? Math.min(1,beat/0.01)*Math.min(1,(0.22-beat)/0.03) : 0; return 0.6*env*(Math.sin(2*Math.PI*880*tt)+0.5*Math.sin(2*Math.PI*1320*tt)); });
+keepAudio.src = makeWav(2.0, tt=> 0.0015*Math.sin(2*Math.PI*40*tt));
+let audioUnlocked=false;
+async function unlockAudio(){
+  if(audioUnlocked) return;
+  try{ alarmAudio.muted=true; await alarmAudio.play(); alarmAudio.pause(); alarmAudio.currentTime=0; alarmAudio.muted=false; audioUnlocked=true; }catch(e){}
+  try{ keepAudio.muted=true; await keepAudio.play(); keepAudio.pause(); keepAudio.muted=false; }catch(e){}
+}
+function startAlarmSound(){ alarmAudio.volume=1; alarmAudio.currentTime=0; alarmAudio.play().catch(()=>{}); }
+function stopAlarmSound(){ alarmAudio.pause(); alarmAudio.currentTime=0; }
+function startKeepAlive(){ keepAudio.volume=1; keepAudio.play().catch(()=>{}); }
+function stopKeepAlive(){ keepAudio.pause(); }
+
+/* ---------- wake lock ---------- */
+async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', ()=>{ wakeLock=null; }); } }catch(e){ wakeLock=null; } }
+function releaseWakeLock(){ try{ wakeLock?.release(); }catch(e){} wakeLock=null; }
+
+/* ---------- GPS ---------- */
+function startGps(){
+  if(!navigator.geolocation){ gps={error:'unsupported'}; return; }
+  gps={fix:null,error:null};
+  geoWatch = navigator.geolocation.watchPosition(p=>{ gps.fix={lat:p.coords.latitude, lon:p.coords.longitude, acc:p.coords.accuracy, time:p.timestamp||Date.now()}; gps.error=null; tick(); },
+    e=>{ gps.error=e.code===1?'denied':'error'; renderArmed(); }, {enableHighAccuracy:false, maximumAge:60000, timeout:60000});
+}
+function stopGps(){ if(geoWatch!==null && navigator.geolocation) navigator.geolocation.clearWatch(geoWatch); geoWatch=null; gps=null; }
+
+/* ---------- restore ---------- */
+(function init(){
+  applyLang();
+  $('proxy-url').value = proxyUrl;
+  $('proxy-url').addEventListener('change', e=>{ proxyUrl = e.target.value.trim().replace(/\/+$/,''); try{ proxyUrl ? localStorage.setItem('aa.proxy', proxyUrl) : localStorage.removeItem('aa.proxy'); }catch(err){} lastOebbTry=0; updatePushOption(); if(state.selected) selectTrain(state.selected); });
+  if(proxyUrl) $('advanced').open = false;
+  updatePushOption();
+  try{ const s=localStorage.getItem('aa.armed'); if(s){ armed=JSON.parse(s); if(new Date(armed.scheduledArrival).getTime()+6*3600e3 > Date.now()){ state.station=armed.station; startArmed(null); if(armed.opts?.push && armed.pushState!=='active') setupPush(); } else { armed=null; save(); } } }catch(e){ armed=null; }
+  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+})();
+</script>
+</body>
+</html>
