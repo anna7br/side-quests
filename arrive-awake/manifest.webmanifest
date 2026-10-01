@@ -1,7 +1,7 @@
 {
   "name": "Arrive Awake",
   "short_name": "Arrive Awake",
-  "description": "A train alarm that moves with your train: wakes you a set number of minutes before the real, delay-adjusted arrival.",
+  "description": "Wake up on train time, delays included: rings a set number of minutes before your train really arrives.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
