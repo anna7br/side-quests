@@ -100,6 +100,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .stepper .val small{display:block;font-size:10px;color:var(--muted);letter-spacing:.04em}
 .dock .btn.primary{flex:1;font:600 19px/1 var(--font-display);letter-spacing:.02em;padding:13px 10px}
 .wrap.has-dock{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+.loud{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.loud a{color:var(--accent)}
 .theme-btn{display:grid;place-items:center;width:34px;height:30px;padding:0;background:none;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
 .theme-btn:hover{color:var(--fg)}
 .theme-btn svg{width:16px;height:16px}
@@ -268,6 +270,15 @@ footer a{color:inherit}
     <label class="check"><input type="checkbox" id="opt-vibrate" checked><span data-i18n="opt_vibrate"><small></small></span></label>
     <label class="check"><input type="checkbox" id="opt-push"><span data-i18n="opt_push"><small></small></span></label>
     <div class="muted" id="push-na" style="font-size:13px;margin-top:-4px" hidden data-i18n="opt_push_na"></div>
+    <div class="muted" style="font-size:13px" data-i18n="push_warn"></div>
+    <div class="loud" id="loud-box" hidden>
+      <label class="field"><span data-i18n="loud_label"></span>
+        <input class="input" id="po-key" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="30" data-i18n-ph="loud_ph">
+      </label>
+      <div class="muted" style="font-size:13px"><span data-i18n="loud_help"></span> <a href="https://pushover.net/" target="_blank" rel="noopener">pushover.net</a></div>
+      <div class="row"><button type="button" class="btn ghost small" id="btn-po-test" data-i18n="loud_test"></button><span class="muted" id="po-msg" style="font-size:13px" role="status"></span></div>
+    </div>
+    <button type="button" class="btn ghost small" id="btn-install" hidden data-i18n="install"></button>
     <div class="row">
       <button class="btn ghost" id="btn-test" type="button" data-i18n="test_alarm"></button>
       <button class="btn primary big grow" id="btn-arm" type="button" data-i18n="arm"></button>
@@ -344,7 +355,7 @@ footer a{color:inherit}
 /* ---------- i18n ---------- */
 const STR = {
   en: {
-    tagline: 'The alarm that follows your train, delays included.', about: 'About & coverage', theme_to_dark: 'Switch to dark mode', theme_to_light: 'Switch to light mode', pk_today: 'Today', pk_tomorrow: 'Tomorrow', pk_day: 'Day', pk_hour: 'Hour', pk_min: 'Minute', pk_now: 'Now', pk_done: 'Done', dock_rings: 'Rings at {t}', dock_loading: 'Loading live data…', dock_options: 'Options', dock_close: 'Dismiss', lead_less: 'Fewer minutes before arrival', lead_more: 'More minutes before arrival',
+    tagline: 'The alarm that follows your train, delays included.', about: 'About & coverage', theme_to_dark: 'Switch to dark mode', theme_to_light: 'Switch to light mode', push_warn: 'Note: a push notification plays your phone’s normal sound once and is muted by silent mode and Do Not Disturb, so it may not wake you from deep sleep. Most reliable: keep this page open with the screen dimmed and the phone charging.', loud_label: 'Loud alarm via Pushover (optional)', loud_ph: 'Your Pushover user key', loud_help: 'Pushover can ring loudly, repeat every 30 seconds and ignore silent mode and Do Not Disturb until you confirm in its app. Needs the Pushover app (one-time purchase after a free trial) and the user key shown on its main screen.', loud_test: 'Send test', loud_test_ok: 'Test sent, check your phone.', loud_test_fail: 'Test failed: {e}', loud_bad_key: 'The key has 30 letters and digits.', install: 'Install as app (keeps notifications enabled)', push_active_loud: 'Server alarm active · loud alarm on', pk_today: 'Today', pk_tomorrow: 'Tomorrow', pk_day: 'Day', pk_hour: 'Hour', pk_min: 'Minute', pk_now: 'Now', pk_done: 'Done', dock_rings: 'Rings at {t}', dock_loading: 'Loading live data…', dock_options: 'Options', dock_close: 'Dismiss', lead_less: 'Fewer minutes before arrival', lead_more: 'More minutes before arrival',
     step_station: '1 · Where do you get off?',
     dest_label: 'Destination station', dest_ph: 'e.g. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Which train?', arr_label: 'Planned arrival (about)', ld_only: 'Long-distance only',
@@ -381,7 +392,7 @@ const STR = {
     push_active: 'Server alarm active', push_pending: 'Registering server alarm…', push_err: 'Server alarm failed: {e}', push_test: 'Test push', push_test_ok: 'Test notification sent. Lock the phone and check that it arrived.', push_test_fail: 'Test push failed: {e}'
   },
   de: {
-    tagline: 'Der Wecker, der deinem Zug folgt, Verspätung inklusive.', about: 'Infos & Abdeckung', theme_to_dark: 'Zum dunklen Design wechseln', theme_to_light: 'Zum hellen Design wechseln', pk_today: 'Heute', pk_tomorrow: 'Morgen', pk_day: 'Tag', pk_hour: 'Stunde', pk_min: 'Minute', pk_now: 'Jetzt', pk_done: 'Fertig', dock_rings: 'Weckt um {t}', dock_loading: 'Lade Echtzeitdaten …', dock_options: 'Optionen', dock_close: 'Schließen', lead_less: 'Weniger Minuten vor Ankunft', lead_more: 'Mehr Minuten vor Ankunft',
+    tagline: 'Der Wecker, der deinem Zug folgt, Verspätung inklusive.', about: 'Infos & Abdeckung', theme_to_dark: 'Zum dunklen Design wechseln', theme_to_light: 'Zum hellen Design wechseln', push_warn: 'Hinweis: Eine Push-Benachrichtigung spielt einmal den normalen Ton deines Handys und wird vom Stumm-Modus und von „Nicht stören“ unterdrückt – sie weckt dich womöglich nicht aus dem Tiefschlaf. Am zuverlässigsten: diese Seite offen lassen, Bildschirm gedimmt, Handy am Ladegerät.', loud_label: 'Lauter Alarm über Pushover (optional)', loud_ph: 'Dein Pushover-User-Key', loud_help: 'Pushover kann laut klingeln, alle 30 Sekunden wiederholen und Stumm-Modus sowie „Nicht stören“ ignorieren, bis du in der App bestätigst. Braucht die Pushover-App (einmaliger Kauf nach kostenloser Testzeit) und den User-Key vom Startbildschirm der App.', loud_test: 'Test senden', loud_test_ok: 'Test gesendet, schau auf dein Handy.', loud_test_fail: 'Test fehlgeschlagen: {e}', loud_bad_key: 'Der Key hat 30 Buchstaben und Ziffern.', install: 'Als App installieren (Benachrichtigungen bleiben aktiv)', push_active_loud: 'Server-Wecker aktiv · lauter Alarm an', pk_today: 'Heute', pk_tomorrow: 'Morgen', pk_day: 'Tag', pk_hour: 'Stunde', pk_min: 'Minute', pk_now: 'Jetzt', pk_done: 'Fertig', dock_rings: 'Weckt um {t}', dock_loading: 'Lade Echtzeitdaten …', dock_options: 'Optionen', dock_close: 'Schließen', lead_less: 'Weniger Minuten vor Ankunft', lead_more: 'Mehr Minuten vor Ankunft',
     step_station: '1 · Wo steigst du aus?',
     dest_label: 'Zielbahnhof', dest_ph: 'z. B. Wien Hbf, Hamburg Hbf, Zürich HB',
     step_time: '2 · Welcher Zug?', arr_label: 'Geplante Ankunft (ungefähr)', ld_only: 'Nur Fernverkehr',
@@ -483,21 +494,28 @@ async function proxyApi(path, params, method='GET', body){
 /* ---------- server-side alarm via Web Push (see proxy/worker.js) ---------- */
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1');
 function b64ToU8(s){ const b=atob(s.replace(/-/g,'+').replace(/_/g,'/').padEnd(Math.ceil(s.length/4)*4,'=')); return Uint8Array.from(b, c=>c.charCodeAt(0)); }
-function alarmBody(){ return { id: armed.alarmId, lead: armed.lead, lang, station: armed.station, scheduledArrival: armed.scheduledArrival, names: armed.names, from: armed.from, ext: (armed.ext||[]).map(e=>({src:e.src, tripId:e.tripId, number:e.number, station:e.station})), snoozeUntil: armed.snoozeUntil||0,
+function alarmBody(){ return { id: armed.alarmId, lead: armed.lead, lang, station: armed.station, scheduledArrival: armed.scheduledArrival, names: armed.names, from: armed.from, ext: (armed.ext||[]).map(e=>({src:e.src, tripId:e.tripId, number:e.number, station:e.station})), snoozeUntil: armed.snoozeUntil||0, pushover: armed.pokey||undefined, api: proxyUrl, appUrl: location.origin+location.pathname,
   members: armed.members.map(m=>({tripId:m.tripId, stopId:m.stopId, parentId:m.parentId, scheduledArrival:m.scheduledArrival, name:m.name})) }; }
 async function setupPush(){
-  if(!armed || !armed.opts.push || !proxyUrl) return;
+  if(!armed || !proxyUrl) return;
+  const web = !!armed.opts.push, loud = !!armed.opts.loud && !!armed.pokey;
+  if(!web && !loud) return;
   armed.pushState='pending'; renderArmed();
   try{
-    if(Notification.permission!=='granted') throw new Error(lang==='de' ? 'Benachrichtigungen nicht erlaubt' : 'notifications not allowed');
-    const reg = await navigator.serviceWorker.ready;
-    const v = await proxyApi('vapid');
-    if(!v.push || !v.publicKey) throw new Error(lang==='de' ? 'Server hat keine Push-Konfiguration' : 'server has no push configuration');
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(v.publicKey)});
+    let sub=null;
+    if(web){
+      try{
+        if(Notification.permission!=='granted') throw new Error(lang==='de' ? 'Benachrichtigungen nicht erlaubt' : 'notifications not allowed');
+        const reg = await navigator.serviceWorker.ready;
+        const v = await proxyApi('vapid');
+        if(!v.push || !v.publicKey) throw new Error(lang==='de' ? 'Server hat keine Push-Konfiguration' : 'server has no push configuration');
+        sub = await reg.pushManager.getSubscription();
+        if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64ToU8(v.publicKey)});
+      }catch(e){ if(!loud) throw e; armed.pushError=e.message; }      // the loud alarm works without web push
+    }
     armed.alarmId = armed.alarmId || (crypto.randomUUID ? crypto.randomUUID() : 'a'+Date.now()+Math.random().toString(36).slice(2));
-    const r = await proxyApi('alarm', {}, 'POST', {...alarmBody(), subscription: sub.toJSON()});
-    armed.alarmId = r.id; armed.pushState='active'; armed.pushError=null; save();
+    const r = await proxyApi('alarm', {}, 'POST', {...alarmBody(), subscription: sub ? sub.toJSON() : undefined});
+    armed.alarmId = r.id; armed.pushState='active'; if(sub) armed.pushError=null; save();
   }catch(e){ armed.pushState='error'; armed.pushError=e.message; save(); }
   renderArmed();
 }
@@ -892,8 +910,8 @@ async function armNow(){
   const wantPush = $('opt-push').checked && !$('opt-push').disabled;
   // permission prompts must stay inside the click gesture (iOS): ask first, unlock audio after
   if('Notification' in window && Notification.permission==='default'){ try{ await Notification.requestPermission(); }catch(e){} }
-  armed = { station: state.station, members: g.members, names:[...g.names], from:g.from, to:g.to, scheduledArrival:g.scheduledArrival, tz:g.tz||state.station.tz, lead:+$('lead').value, ext:g.ext||[],
-            opts:{wake:$('opt-wake').checked, gps:$('opt-gps').checked, audio:$('opt-audio').checked, vibrate:$('opt-vibrate').checked, push:wantPush}, armedAt:Date.now() };
+  armed = { station: state.station, members: g.members, names:[...g.names], from:g.from, to:g.to, scheduledArrival:g.scheduledArrival, tz:g.tz||state.station.tz, lead:+$('lead').value, ext:g.ext||[], pokey:loudKey()||undefined,
+            opts:{wake:$('opt-wake').checked, gps:$('opt-gps').checked, audio:$('opt-audio').checked, vibrate:$('opt-vibrate').checked, push:wantPush, loud:!!loudKey()}, armedAt:Date.now() };
   save();
   await unlockAudio();
   startArmed(state.tripPreview);
@@ -901,7 +919,34 @@ async function armNow(){
 }
 $('btn-arm').addEventListener('click', armNow);
 $('dock-arm').addEventListener('click', armNow);
+/* optional loud alarm (Pushover): only offered when the backend has an application token configured */
+let loudAvailable = false;
+function loudKey(){ const k=($('po-key').value||'').trim(); return loudAvailable && /^[A-Za-z0-9]{30}$/.test(k) ? k : ''; }
+async function initLoud(){
+  loudAvailable=false; $('loud-box').hidden=true; if(!proxyUrl) return;
+  try{ const v=await proxyApi('vapid'); loudAvailable=!!v.loud; $('loud-box').hidden=!loudAvailable; }catch(e){}
+}
+try{ $('po-key').value = localStorage.getItem('aa.pokey')||''; }catch(e){}
+$('po-key').addEventListener('input', ()=>{ try{ localStorage.setItem('aa.pokey', $('po-key').value.trim()); }catch(e){} });
+$('btn-po-test').addEventListener('click', async ()=>{
+  const m=$('po-msg'), k=($('po-key').value||'').trim();
+  if(!/^[A-Za-z0-9]{30}$/.test(k)){ m.textContent=t('loud_bad_key'); return; }
+  m.textContent='…';
+  try{ await proxyApi('pushover/test', {}, 'POST', {user:k, lang}); m.textContent=t('loud_test_ok'); }
+  catch(e){ m.textContent=t('loud_test_fail',{e:e.message}); }
+});
+/* installed web apps keep their notification permission; Chrome may revoke it for ignored websites */
+let installEv=null;
+window.addEventListener('beforeinstallprompt', e=>{ e.preventDefault(); installEv=e; $('btn-install').hidden=false; });
+window.addEventListener('appinstalled', ()=>{ installEv=null; $('btn-install').hidden=true; });
+$('btn-install').addEventListener('click', async ()=>{ if(!installEv) return; installEv.prompt(); try{ await installEv.userChoice; }catch(e){} installEv=null; $('btn-install').hidden=true; });
+/* "I'm awake" pressed on a notification: the service worker already stopped the server alarm; disarm here too */
+async function checkAwakeFlag(){
+  if(!armed?.alarmId || !('caches' in window)) return;
+  try{ const c=await caches.open('aa-flags'); const u=new URL('__awake/'+armed.alarmId, location.href).href; if(await c.match(u)){ await c.delete(u); stopArmed(); } }catch(e){}
+}
 function updatePushOption(){
+  initLoud();
   const ok = pushSupported() && !!proxyUrl;
   $('opt-push').disabled = !ok; $('push-na').hidden = ok;
   if(!ok) $('opt-push').checked=false; else if(!$('opt-push').dataset.touched) $('opt-push').checked=true;
@@ -913,7 +958,8 @@ $('btn-push-test').addEventListener('click', async ()=>{
   catch(e){ m.className='msg bad'; m.textContent=t('push_test_fail',{e:e.message}); }
 });
 navigator.serviceWorker?.addEventListener('message', e=>{
-  const d=e.data; if(d?.type!=='push' || !armed || ringing) return;
+  const d=e.data; if(d?.type==='awake'){ if(armed && (!d.id || armed.alarmId===d.id)) stopArmed(); return; }
+  if(d?.type!=='push' || !armed || ringing) return;
   const k = d.data?.kind; if(k==='test') return;
   if(Date.now() < snoozeUntil) return;
   ring(k==='cancel' ? 'cancel' : k==='arrived' ? 'arrived' : 'wake');
@@ -935,11 +981,11 @@ function stopArmed(){
   stopAlarmSound(); stopKeepAlive(); releaseWakeLock(); stopGps();
   document.removeEventListener('visibilitychange', onVisible);
   armed=null; live=null; save(); ringing=false;
-  $('ring').hidden=true; $('armed').hidden=true; $('setup').hidden=false; document.querySelector('meta[name=theme-color]').content='#0b0c10';
+  $('ring').hidden=true; $('armed').hidden=true; $('setup').hidden=false; document.querySelector('meta[name=theme-color]').content=THEME_COLOR[theme];
 }
 $('btn-disarm').addEventListener('click', stopArmed);
 $('btn-refresh').addEventListener('click', ()=> schedulePoll(0));
-function onVisible(){ if(document.visibilityState==='visible'){ if(armed?.opts.wake) requestWakeLock(); schedulePoll(0); tick(); } }
+function onVisible(){ if(document.visibilityState==='visible'){ checkAwakeFlag(); if(armed?.opts.wake) requestWakeLock(); schedulePoll(0); tick(); } }
 
 function schedulePoll(delayMs){
   clearTimeout(pollTimer);
@@ -1014,7 +1060,7 @@ function renderSrc(){
   parts.push(`<span class="dot ${dotCls}"></span>`);
   if(c) parts.push(`<span>${escapeHtml(c.basis==='live' ? t('live_src',{s:srcLabel(live.info.source)}) : c.basis==='gps' ? c.note : t('sched_only'))}</span>`);
   parts.push(`<span class="mono">${escapeHtml(t('updated',{t: age===null ? t('never') : fmtDur(age)}))}</span>`);
-  if(armed.opts.push){ const ps=armed.pushState; parts.push(`<span class="${ps==='active'?'ok-txt':ps==='error'?'bad-txt':''}">${escapeHtml(ps==='active' ? t('push_active') : ps==='error' ? t('push_err',{e:armed.pushError||''}) : t('push_pending'))}</span>`); }
+  if(armed.opts.push || armed.opts.loud){ const ps=armed.pushState; parts.push(`<span class="${ps==='active'?'ok-txt':ps==='error'?'bad-txt':''}">${escapeHtml(ps==='active' ? t(armed.opts.loud ? 'push_active_loud' : 'push_active') : ps==='error' ? t('push_err',{e:armed.pushError||''}) : t('push_pending'))}</span>`); }
   $('btn-push-test').hidden = !(armed.opts.push && armed.pushState==='active');
   $('a-src').innerHTML = parts.join(' · ');
   const w=$('a-warn');
@@ -1084,7 +1130,7 @@ function stopGps(){ if(geoWatch!==null && navigator.geolocation) navigator.geolo
   $('proxy-url').addEventListener('change', e=>{ proxyUrl = e.target.value.trim().replace(/\/+$/,''); try{ proxyUrl ? localStorage.setItem('aa.proxy', proxyUrl) : localStorage.removeItem('aa.proxy'); }catch(err){} lastExtTry=0; updatePushOption(); if(state.selected) selectTrain(state.selected); });
   if(proxyUrl) $('advanced').open = false;
   updatePushOption();
-  try{ const s=localStorage.getItem('aa.armed'); if(s){ armed=JSON.parse(s); if(new Date(armed.scheduledArrival).getTime()+6*3600e3 > Date.now()){ state.station=armed.station; startArmed(null); if(armed.opts?.push && armed.pushState!=='active') setupPush(); } else { armed=null; save(); } } }catch(e){ armed=null; }
+  try{ const s=localStorage.getItem('aa.armed'); if(s){ armed=JSON.parse(s); if(new Date(armed.scheduledArrival).getTime()+6*3600e3 > Date.now()){ state.station=armed.station; startArmed(null); if((armed.opts?.push || armed.opts?.loud) && armed.pushState!=='active') setupPush(); checkAwakeFlag(); } else { armed=null; save(); } } }catch(e){ armed=null; }
   if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost' || location.hostname==='127.0.0.1')){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 })();
 </script>

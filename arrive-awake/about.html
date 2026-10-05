@@ -86,7 +86,7 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
     <li><strong>Live operator data first.</strong> The expected arrival at your stop comes from the operator's realtime feed where one is open. Sources, in order of trust for each country: the operator or infrastructure manager through the backend (ÖBB Scotty for Austria, the RFI arrival boards for Italy, MÁV for Hungary), then <a href="https://transitous.org/" target="_blank" rel="noopener">Transitous</a>, an open routing service that aggregates the open GTFS-RT feeds of Europe.</li>
     <li><strong>GPS as the fallback.</strong> Where no live data exists, or when live data looks stale, the phone's position is projected onto the route and the timetable is interpolated: if you are where the train should have been 40 minutes ago, the arrival is 40 minutes late. Position never leaves the phone.</li>
     <li><strong>Sparse polling.</strong> Live data is re-read every 30 minutes while the alarm is more than 6 hours away, every 15 minutes above 3 hours, every 10 minutes above 1 hour and every minute in the last hour.</li>
-    <li><strong>Server alarm for the locked screen.</strong> A browser page cannot run while the phone is locked, so the armed alarm is also stored on a small server that re-evaluates the arrival on the same cadence and sends push notifications at alarm time, every minute until you tap "I'm awake". Cancelled stops trigger an immediate alarm.</li>
+    <li><strong>Server alarm for the locked screen.</strong> A browser page cannot run while the phone is locked, so the armed alarm is also stored on a small server that re-evaluates the arrival on the same cadence and sends push notifications at alarm time: up to eight within about 20 minutes, in widening intervals, until you tap "I'm awake" (also possible from the notification itself). Cancelled stops trigger an immediate notification. If you add a <a href="https://pushover.net/" target="_blank" rel="noopener">Pushover</a> key (optional), the server additionally triggers a loud emergency alarm, see below.</li>
   </ul>
 
   <h2>Coverage: live delays for long-distance trains</h2>
@@ -144,6 +144,7 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
 
   <h2>Limits you should know</h2>
   <ul>
+    <li><strong>A notification is not an alarm.</strong> A web page can only show a push notification: your phone plays its normal notification sound once, silent mode and Do Not Disturb mute it, and it cannot loop or ring louder. That is often not enough to wake a deep sleeper. Two ways around it: keep the app open with the screen dimmed and the phone charging (the app then rings its own looping alarm), or use the optional loud alarm: with the free-to-register Pushover service and its app (one-time purchase after a free trial) the server sends an emergency-priority message that rings loudly, repeats every 30 seconds and ignores silent mode and Do Not Disturb until you confirm. A web app cannot set a native phone alarm by itself.</li>
     <li><strong>Foreground without the server alarm.</strong> Keep the app open with the screen on (it holds a wake lock; dim the screen and put the phone face down on the charger). With the server alarm, push notifications reach a locked phone, but <strong>Do Not Disturb or Sleep Focus silences them</strong>: switch it off or allow the browser / the home-screen app through. On iPhone, push works only for the home-screen app (iOS 16.4+).</li>
     <li><strong>No signal, no update.</strong> Tunnels and dead zones freeze the data; the last known times stay in force and the warning turns red after 15 minutes. The GPS estimate keeps working with the last fix.</li>
     <li><strong>Test it once at home.</strong> Arm a train that arrives soon, use "Test push", lock the phone, check the notification arrives.</li>
@@ -152,7 +153,7 @@ footer{margin-top:36px;color:var(--muted);font-size:13px}
   <h2>Data and privacy</h2>
   <ul>
     <li>Station and train searches go to Transitous and, where it applies, to the backend. The backend forwards them to ÖBB, Trenitalia or MÁV.</li>
-    <li>With the server alarm on, the backend stores your train, stop, lead time and the push subscription of your browser until a few hours after arrival, then deletes them.</li>
+    <li>With the server alarm on, the backend stores your train, stop, lead time, the push subscription of your browser and, if you entered one, your Pushover user key until a few hours after arrival, then deletes them.</li>
     <li>Your position is used only on the phone for the GPS estimate and is never sent anywhere.</li>
     <li>Everything is open source (MIT): <a href="https://github.com/anna7br/side-quests/tree/main/arrive-awake" target="_blank" rel="noopener">github.com/anna7br/side-quests</a>.</li>
   </ul>

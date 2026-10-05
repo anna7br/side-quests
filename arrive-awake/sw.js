@@ -1,8 +1,8 @@
 /* Arrive Awake service worker: caches the app shell, shows push alarms. API calls always go to the network. */
-const CACHE = 'arrive-awake-v2';
+const CACHE = 'arrive-awake-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL).catch(() => {})).then(() => self.skipWaiting())); });
-self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k !== 'aa-flags').map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin || e.request.method !== 'GET') return;           // API + fonts: network only
@@ -16,6 +16,7 @@ self.addEventListener('push', e => {
   const title = d.title || 'Arrive Awake';
   const opts = {
     body: d.body || '', tag: 'arrive-awake-' + (d.kind || 'wake'), renotify: true, requireInteraction: d.kind !== 'test',
+    actions: d.kind === 'test' ? [] : [{ action: 'awake', title: d.lang === 'de' ? 'Ich bin wach' : "I'm awake" }],
     vibrate: [800, 300, 800, 300, 800, 300, 800, 300, 800], icon: './icon-192.png', badge: './icon-192.png', data: d, timestamp: Date.now(),
   };
   e.waitUntil(Promise.all([
@@ -25,9 +26,18 @@ self.addEventListener('push', e => {
 });
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const d = e.notification.data || {};
+  if (e.action === 'awake') {          // "I'm awake" button: stop the server alarm without opening the app; the app disarms itself when it next runs
+    e.waitUntil((async () => {
+      if (d.ack) { try { await fetch(d.ack, { method: 'DELETE' }); } catch (err) {} }
+      try { const c = await caches.open('aa-flags'); await c.put(new URL('__awake/' + d.id, self.registration.scope).href, new Response('1')); } catch (err) {}
+      (await self.clients.matchAll({ type: 'window', includeUncontrolled: true })).forEach(c => c.postMessage({ type: 'awake', id: d.id }));
+    })());
+    return;
+  }
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
     const c = cs.find(x => 'focus' in x);
-    if (c) { c.postMessage({ type: 'push', data: e.notification.data || {} }); return c.focus(); }
+    if (c) { c.postMessage({ type: 'push', data: d }); return c.focus(); }
     return self.clients.openWindow('./');
   }));
 });

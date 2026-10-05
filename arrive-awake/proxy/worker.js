@@ -27,6 +27,7 @@
  *      DELETE /alarm?id=                                  remove it (disarm / "I'm awake")
  *      POST   /alarm/snooze?id=&until=<ms>                snooze
  *      POST   /alarm/test?id=                             send a test push right now
+ *      POST   /pushover/test {user}                       optional loud alarm: send a test message to a Pushover user key (needs secret PUSHOVER_TOKEN)
  *
  * Deploy: npx wrangler deploy (see wrangler.toml). All upstreams are unofficial APIs: keep request volume personal-scale.
  */
@@ -237,17 +238,21 @@ async function evaluate(alarm) {
 
 /* ====================== push ====================== */
 const MSG = {
-  en: { wake: ['Time to get up', 'Arrival in {dest} expected at {eta} ({delay}). Alarm {n}/20.'], arrived: ['Arrival now', 'The train should be arriving in {dest} now.'], cancel: ['Check your train!', 'Your stop {dest} is reported as cancelled.'], test: ['Test notification', 'Push works. Expected arrival in {dest}: {eta} ({delay}).'] },
-  de: { wake: ['Aufstehen!', 'Ankunft in {dest} voraussichtlich um {eta} ({delay}). Wecker {n}/20.'], arrived: ['Ankunft jetzt', 'Der Zug sollte jetzt in {dest} ankommen.'], cancel: ['Zug prüfen!', 'Dein Halt {dest} wird als ausgefallen gemeldet.'], test: ['Test-Benachrichtigung', 'Push funktioniert. Erwartete Ankunft in {dest}: {eta} ({delay}).'] },
+  en: { wake: ['Arrive Awake: time to get up', 'Arrival in {dest} expected at {eta} ({delay}).'], arrived: ['Arrive Awake: arriving now', 'Your train should be arriving in {dest} now.'], cancel: ['Arrive Awake: check your train', 'Your stop {dest} is reported as cancelled.'], test: ['Arrive Awake: test', 'Notifications work. Expected arrival in {dest}: {eta} ({delay}).'] },
+  de: { wake: ['Arrive Awake: Zeit zum Aufstehen', 'Ankunft in {dest} voraussichtlich um {eta} ({delay}).'], arrived: ['Arrive Awake: Ankunft jetzt', 'Dein Zug sollte jetzt in {dest} ankommen.'], cancel: ['Arrive Awake: Zug prüfen', 'Dein Halt {dest} wird als ausgefallen gemeldet.'], test: ['Arrive Awake: Test', 'Benachrichtigungen funktionieren. Erwartete Ankunft in {dest}: {eta} ({delay}).'] },
 };
 function fmtTime(iso, tz, lang) { try { return new Intl.DateTimeFormat(lang === 'de' ? 'de-AT' : 'en-GB', { hour: '2-digit', minute: '2-digit', timeZone: tz || AT_TZ }).format(new Date(iso)); } catch (e) { return String(iso).slice(11, 16); } }
 function delayStr(min, lang) { if (!Number.isFinite(min) || Math.abs(min) < 1) return lang === 'de' ? 'pünktlich' : 'on time'; return (min > 0 ? '+' : '−') + Math.abs(min) + (lang === 'de' ? ' Min' : ' min'); }
-async function sendPush(env, alarm, kind, ev) {
+function texts(alarm, kind, ev) {
   const lang = MSG[alarm.lang] ? alarm.lang : 'en';
   const eta = ev?.eta || alarm.scheduledArrival;
-  const vars = { dest: alarm.station?.name || '', eta: fmtTime(eta, alarm.station?.tz, lang), delay: delayStr(ev?.delay ?? 0, lang), n: (alarm.pushCount || 0) + 1 };
+  const vars = { dest: alarm.station?.name || '', eta: fmtTime(eta, alarm.station?.tz, lang), delay: delayStr(ev?.delay ?? 0, lang) };
   const [title, body] = MSG[lang][kind].map(s => s.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? ''));
-  const data = JSON.stringify({ kind, title, body, eta, delay: ev?.delay ?? null, dest: alarm.station?.name, id: alarm.id, lang });
+  return { lang, eta, title, body };
+}
+async function sendPush(env, alarm, kind, ev) {
+  const { lang, eta, title, body } = texts(alarm, kind, ev);
+  const data = JSON.stringify({ kind, title, body, eta, delay: ev?.delay ?? null, dest: alarm.station?.name, id: alarm.id, lang, ack: alarm.api ? alarm.api + '/alarm?id=' + encodeURIComponent(alarm.id) : null });
   const vapid = { subject: env.VAPID_SUBJECT || 'mailto:admin@example.com', publicKey: env.VAPID_PUBLIC_KEY, privateKey: env.VAPID_PRIVATE_KEY };
   const payload = await buildPushPayload({ data, options: { ttl: 120, urgency: 'high', topic: 'arrive-awake' } }, alarm.subscription, vapid);
   const r = await fetch(alarm.subscription.endpoint, payload);
@@ -255,6 +260,32 @@ async function sendPush(env, alarm, kind, ev) {
   if (!r.ok) throw new Error('push service HTTP ' + r.status + ' ' + (await r.text()).slice(0, 200));
   return 'sent';
 }
+
+/* ====================== optional loud alarm: Pushover emergency priority ======================
+ * A web push notification plays the phone's normal notification sound once, obeys silent mode / Do Not Disturb and cannot
+ * loop, so it does not wake a deep sleeper. Pushover's emergency priority is the one thing that does: it rings loudly,
+ * repeats every `retry` seconds and ignores silent mode and Do Not Disturb until the user acknowledges (or `expire` passes).
+ * Needs a Pushover application token as secret PUSHOVER_TOKEN (free to register) and each user's own Pushover user key. */
+const PO = 'https://api.pushover.net/1/';
+const validPoKey = k => typeof k === 'string' && /^[A-Za-z0-9]{30}$/.test(k);
+async function poPost(path, form) {
+  const r = await fetch(PO + path, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams(form) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || j.status !== 1) throw new Error('Pushover: ' + ((j.errors || []).join(', ') || 'HTTP ' + r.status));
+  return j;
+}
+async function sendLoud(env, alarm, kind, ev) {
+  const { title, body } = texts(alarm, kind, ev);
+  return poPost('messages.json', { token: env.PUSHOVER_TOKEN, user: alarm.pushover, title, message: body, priority: 2, retry: 30, expire: 1800, sound: 'persistent', ...(alarm.appUrl ? { url: alarm.appUrl, url_title: 'Arrive Awake' } : {}) });
+}
+async function cancelLoud(env, alarm) {
+  if (!alarm?.poReceipt || alarm.poReceipt === 'n/a' || !env.PUSHOVER_TOKEN) return;
+  try { await poPost(`receipts/${encodeURIComponent(alarm.poReceipt)}/cancel.json`, { token: env.PUSHOVER_TOKEN }); } catch (e) { /* already acknowledged or expired */ }
+}
+/* Web push is escalated sparingly: gaps in seconds before the n-th notification. Fewer, spaced-out notifications keep the site
+ * from being classed as disruptive (Chrome revokes notification permission for high volume + low engagement). */
+const PUSH_GAPS = [0, 60, 60, 120, 180, 240, 300, 300];
+const pushDue = (a, now) => (a.pushCount || 0) < PUSH_GAPS.length && now - (a.lastPush || 0) >= PUSH_GAPS[a.pushCount || 0] * 1000 - 10000;
 
 /* ====================== alarm store & cron ======================
  * KV on the Workers free plan allows 1000 writes, 1000 lists and 100k reads per day, so the cron must be frugal:
@@ -288,10 +319,22 @@ async function runAlarms(env, force = false) {
     log.eta = new Date(etaMs).toISOString(); log.alarmAt = new Date(alarmAt).toISOString(); log.source = ev?.source;
     let kind = null, dirty = false;
     if (ev?.cancelled && !a.cancelPushed) { kind = 'cancel'; a.cancelPushed = true; dirty = true; }
-    else if (now >= alarmAt && now >= (a.snoozeUntil || 0) && (a.pushCount || 0) < 20 && now - (a.lastPush || 0) >= 50e3) kind = now >= etaMs ? 'arrived' : 'wake';
+    else if (now >= alarmAt && now >= (a.snoozeUntil || 0) && pushDue(a, now)) kind = now >= etaMs ? 'arrived' : 'wake';
     if (kind) {
-      try { const res = await sendPush(env, a, kind, ev); log.push = kind + ':' + res; if (res === 'gone') { await env.ALARMS.delete(key(id)); gone.push(id); out.push(log); return; } a.pushCount = (a.pushCount || 0) + 1; a.lastPush = now; a.last = ev; dirty = true; }
-      catch (e) { log.push = 'error: ' + e.message; }
+      let sent = false;
+      if (kind !== 'cancel' && a.pushover && env.PUSHOVER_TOKEN && !a.poReceipt && (a.poTries || 0) < 5) {
+        a.poTries = (a.poTries || 0) + 1; dirty = true;
+        try { const j = await sendLoud(env, a, kind, ev); a.poReceipt = j.receipt || 'n/a'; sent = true; log.loud = 'sent'; }
+        catch (e) { log.loud = 'error: ' + e.message; a.poError = String(e.message).slice(0, 200); }
+      }
+      if (a.subscription) {
+        try {
+          const res = await sendPush(env, a, kind, ev); log.push = kind + ':' + res;
+          if (res === 'gone') { if (!a.pushover) { await env.ALARMS.delete(key(id)); gone.push(id); out.push(log); return; } a.subscription = null; dirty = true; }
+          else sent = true;
+        } catch (e) { log.push = 'error: ' + e.message; }
+      }
+      if (sent) { a.pushCount = (a.pushCount || 0) + 1; a.lastPush = now; a.last = ev; dirty = true; }
     }
     if (now > etaMs + 20 * 60e3) { await env.ALARMS.delete(key(id)); gone.push(id); log.deleted = 'done'; out.push(log); return; }
     if (dirty) await env.ALARMS.put(key(id), JSON.stringify(a), { expirationTtl: ttlFor(a) });
@@ -325,26 +368,37 @@ export default {
         if (op === 'delay') { const n = p.get('number'); if (!n) return json({ error: 'number required' }, 400, origin); return json(await src.delay({ number: n, station: p.get('station') }), 200, origin, cache); }
       }
       /* push alarm */
-      if (is('/vapid')) return json({ publicKey: env.VAPID_PUBLIC_KEY || null, push: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.ALARMS) }, 200, origin);
+      if (is('/vapid')) return json({ publicKey: env.VAPID_PUBLIC_KEY || null, push: !!(env.VAPID_PUBLIC_KEY && env.VAPID_PRIVATE_KEY && env.ALARMS), loud: !!(env.PUSHOVER_TOKEN && env.ALARMS) }, 200, origin);
+      if (is('/pushover/test') && request.method === 'POST') {
+        if (!env.PUSHOVER_TOKEN || !env.ALARMS) return json({ error: 'loud alarm not configured on this server' }, 503, origin);
+        const b = await request.json().catch(() => ({}));
+        if (!validPoKey(b.user)) return json({ error: 'Pushover user key must be 30 letters/digits' }, 400, origin);
+        if (await env.ALARMS.get('potest:' + b.user)) return json({ error: 'please wait a minute between tests' }, 429, origin);
+        await env.ALARMS.put('potest:' + b.user, '1', { expirationTtl: 60 });
+        await poPost('messages.json', { token: env.PUSHOVER_TOKEN, user: b.user, title: 'Arrive Awake: test', message: b.lang === 'de' ? 'Der laute Wecker funktioniert. Echte Wecker klingeln mit Notfall-Priorität, bis du bestätigst.' : 'The loud alarm works. Real alarms ring with emergency priority until you acknowledge.', priority: 1, sound: 'persistent' });
+        return json({ ok: true }, 200, origin);
+      }
       if (is('/alarm') || is('/alarm/snooze') || is('/alarm/test')) {
         if (!env.ALARMS || !env.VAPID_PRIVATE_KEY) return json({ error: 'push alarm not configured on this server (KV + VAPID keys)' }, 503, origin);
         if (request.method === 'POST' && is('/alarm')) {
           const b = await request.json();
-          if (!b?.subscription?.endpoint || !b.scheduledArrival || !b.station) return json({ error: 'subscription, station, scheduledArrival required' }, 400, origin);
+          if ((!b?.subscription?.endpoint && !validPoKey(b?.pushover)) || !b.scheduledArrival || !b.station) return json({ error: 'subscription (or Pushover key), station, scheduledArrival required' }, 400, origin);
           const id = String(b.id || crypto.randomUUID()).slice(0, 80);
           const prev = await env.ALARMS.get(key(id), 'json');
           const ext = Array.isArray(b.ext) ? b.ext.filter(e => e && SOURCES[e.src]).slice(0, 6) : (b.oebb?.tripId ? [{ src: 'oebb', tripId: b.oebb.tripId }] : []);
-          const a = { id, subscription: b.subscription, lead: Math.min(180, Math.max(1, +b.lead || 20)), lang: b.lang === 'de' ? 'de' : 'en', station: b.station, scheduledArrival: b.scheduledArrival, members: (b.members || []).slice(0, 8), ext, snoozeUntil: +b.snoozeUntil || 0, createdAt: prev?.createdAt || Date.now(), pushCount: prev?.pushCount || 0, lastPush: prev?.lastPush || 0, last: prev?.last || null };
+          const api = (() => { try { const u = new URL(String(b.api)); const local = /^(localhost|127\.0\.0\.1)$/.test(u.hostname); return (u.protocol === 'https:' || local) ? u.origin + u.pathname.replace(/\/+$/, '') : null; } catch (e) { return null; } })();
+          const appUrl = typeof b.appUrl === 'string' && /^https:\/\/[^\s]{1,200}$/.test(b.appUrl) ? b.appUrl : null;
+          const a = { id, subscription: b.subscription?.endpoint ? b.subscription : null, pushover: validPoKey(b.pushover) ? b.pushover : null, api, appUrl, poReceipt: prev?.poReceipt || null, poTries: prev?.poTries || 0, lead: Math.min(180, Math.max(1, +b.lead || 20)), lang: b.lang === 'de' ? 'de' : 'en', station: b.station, scheduledArrival: b.scheduledArrival, members: (b.members || []).slice(0, 8), ext, snoozeUntil: +b.snoozeUntil || 0, createdAt: prev?.createdAt || Date.now(), pushCount: prev?.pushCount || 0, lastPush: prev?.lastPush || 0, last: prev?.last || null };
           await env.ALARMS.put(key(id), JSON.stringify(a), { expirationTtl: ttlFor(a) });
           if (!prev) await addToIndex(env, id);
           return json({ id, ok: true }, 200, origin);
         }
         const id = p.get('id'); if (!id) return json({ error: 'id required' }, 400, origin);
         const a = await env.ALARMS.get(key(id), 'json');
-        if (request.method === 'DELETE') { if (a) await removeAlarm(env, id); return json({ ok: true }, 200, origin); }
+        if (request.method === 'DELETE') { if (a) { await cancelLoud(env, a); await removeAlarm(env, id); } return json({ ok: true }, 200, origin); }
         if (!a) return json({ error: 'unknown alarm' }, 404, origin);
-        if (is('/alarm/snooze')) { a.snoozeUntil = +p.get('until') || Date.now() + 5 * 60e3; a.lastPush = 0; await env.ALARMS.put(key(id), JSON.stringify(a), { expirationTtl: ttlFor(a) }); return json({ ok: true, snoozeUntil: a.snoozeUntil }, 200, origin); }
-        if (is('/alarm/test')) { let ev = a.last; try { ev = await evaluate(a); } catch (e) {} const res = await sendPush(env, a, 'test', ev); return json({ ok: res === 'sent', result: res, eta: ev?.eta || null, source: ev?.source || null }, 200, origin); }
+        if (is('/alarm/snooze')) { await cancelLoud(env, a); a.poReceipt = null; a.poTries = 0; a.pushCount = 0; a.snoozeUntil = +p.get('until') || Date.now() + 5 * 60e3; a.lastPush = 0; await env.ALARMS.put(key(id), JSON.stringify(a), { expirationTtl: ttlFor(a) }); return json({ ok: true, snoozeUntil: a.snoozeUntil }, 200, origin); }
+        if (is('/alarm/test')) { if (!a.subscription) return json({ ok: false, result: 'no push subscription (loud alarm only)' }, 200, origin); let ev = a.last; try { ev = await evaluate(a); } catch (e) {} const res = await sendPush(env, a, 'test', ev); return json({ ok: res === 'sent', result: res, eta: ev?.eta || null, source: ev?.source || null }, 200, origin); }
       }
       if (is('/__cron') && env.DEV) return json(await runAlarms(env, true), 200, origin);
       if (is('/it/__diag')) {       // which request shapes does the RFI site accept from this network?
@@ -355,7 +409,7 @@ export default {
         }
         return json(out, 200, origin);
       }
-      return json({ ok: true, service: 'arrive-awake backend', sources: Object.keys(SOURCES), push: !!(env.VAPID_PUBLIC_KEY && env.ALARMS), endpoints: ['/{oebb|it}/locations?q=', '/{oebb|it}/arrivals?station=&when=&duration=', '/oebb/trip?id=', '/it/delay?station=&number=', '/hu/delay?number=', '/vapid', 'POST /alarm', 'DELETE /alarm?id=', 'POST /alarm/snooze?id=&until=', 'POST /alarm/test?id='] }, 200, origin);
+      return json({ ok: true, service: 'arrive-awake backend', sources: Object.keys(SOURCES), push: !!(env.VAPID_PUBLIC_KEY && env.ALARMS), endpoints: ['/{oebb|it}/locations?q=', '/{oebb|it}/arrivals?station=&when=&duration=', '/oebb/trip?id=', '/it/delay?station=&number=', '/hu/delay?number=', '/vapid', 'POST /alarm', 'DELETE /alarm?id=', 'POST /alarm/snooze?id=&until=', 'POST /alarm/test?id=', 'POST /pushover/test'] }, 200, origin);
     } catch (e) {
       return json({ error: String(e.message || e) }, 502, origin);
     }

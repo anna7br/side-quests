@@ -30,10 +30,25 @@ If GPS and live data disagree by 5 min or more, GPS wins and the screen says so.
 
 Only through the **server alarm**. A web page cannot run while the phone is locked, so the app itself can only ring while it is in the foreground with the screen on. With the backend deployed:
 
-- **Android (Chrome, installed or not)**: push notifications arrive with the screen locked, make sound and vibrate (the service worker uses a long vibration pattern and `requireInteraction`). One notification per minute until acknowledged. Tapping it opens the app, which then rings continuously.
+- **Android (Chrome, installed or not)**: push notifications arrive with the screen locked, make sound and vibrate (the service worker uses a long vibration pattern and `requireInteraction`). Up to 8 notifications within ~20 minutes (gaps 0, 1, 1, 2, 3, 4, 5, 5 min, see `PUSH_GAPS` in `proxy/worker.js`), each with an **"I'm awake"** action that stops the server alarm without opening the app. Tapping the notification opens the app, which then rings continuously.
 - **iPhone (iOS 16.4+)**: Web Push works **only for apps added to the home screen**, and notifications are shown with the default sound. They cannot bypass Focus modes.
 - **Do Not Disturb / Sleep Focus silences normal notifications on both platforms.** Before a night train either turn it off, or allow the browser (Android: Settings → Notifications → Do Not Disturb → Apps → Chrome; iOS: Sleep Focus → Allowed apps → the home-screen app) to break through. Also exempt Chrome from battery optimisation on aggressive Android skins.
+- **A notification cannot wake a deep sleeper.** It plays the normal notification sound once and is muted by silent mode / Do Not Disturb; web push has no custom or looping sound and no way to ring like an alarm clock. Reliable options: keep the page open (screen dimmed, charging), or enable the **loud alarm** below.
 - Use **"Test push"** on the armed screen, then lock the phone, and check that the notification arrives. Do this once at home, not in the sleeper.
+
+### Loud alarm via Pushover (optional)
+
+For a real wake-up on a locked phone the backend can additionally send a **Pushover emergency-priority message** (`priority=2`, sound `persistent`, repeats every 30 s for up to 30 min, ignores silent mode and Do Not Disturb, stops when acknowledged in the Pushover app, in Arrive Awake via "I'm awake", or on snooze/disarm). It is off until the backend has an application token:
+
+1. Register an application (free) at https://pushover.net/apps/build and copy its API token.
+2. `npx wrangler secret put PUSHOVER_TOKEN` in `proxy/` and paste the token.
+3. The app then shows a "Loud alarm via Pushover" field (it asks the backend's `/vapid`, which reports `loud: true`). Each user installs the Pushover app (one-time purchase per platform after a 30-day trial), pastes their own **user key** (main screen of the app), presses "Send test", and arms the alarm as usual. It works without web push permission, also on iPhone without installing the web app.
+
+The user key is stored with the alarm like the push subscription and removed after the trip. Free application quota: 10,000 messages per month.
+
+### Why notifications might be flagged as spam
+
+Chrome revokes notification permission from sites combining **high notification volume with very low engagement**, and warns users about such sites. An alarm that fires while the user sleeps is exactly that pattern, so: the server sends at most 8 notifications per alarm, in widening gaps; texts name the app and avoid counters ("3/20"); notifications carry an "I'm awake" action (an interaction); the app offers **Install as app** (installed web apps keep their permission); and the permission is requested only when the user arms an alarm with the push option on. Moving the app off the shared `anna7br.github.io` origin (own domain) would keep its reputation separate from the personal website.
 
 A native Android app with an exact alarm would be more reliable; this is the most a web app can do.
 
