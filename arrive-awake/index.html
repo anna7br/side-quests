@@ -283,6 +283,8 @@ footer a{color:inherit}
       <button class="btn ghost" id="btn-test" type="button" data-i18n="test_alarm"></button>
       <button class="btn primary big grow" id="btn-arm" type="button" data-i18n="arm"></button>
     </div>
+    <button class="btn ghost small" id="btn-locktest" type="button" data-i18n="locktest"></button>
+    <div class="msg" id="locktest-msg" hidden role="status"></div>
     <div class="msg warn" id="arm-msg" hidden></div>
   </section>
 
@@ -364,7 +366,7 @@ const STR = {
     step_alarm: '3 · Alarm', lead_label: 'Wake me before arrival', min_before: 'min before',
     opt_wake: 'Keep screen on', opt_wake_s: 'Browsers pause pages when the screen is locked. Dim the screen and leave the phone face-down instead.',
     opt_gps: 'Use GPS as a backup estimate', opt_gps_s: 'Where live data stops (e.g. ÖBB inside Austria), your position on the route gives an estimate of the real arrival.',
-    opt_audio: 'Silent audio keep-alive', opt_audio_s: 'Plays an inaudible loop so iOS keeps the page alive a bit longer. Costs some battery.',
+    opt_audio: 'Keep running when the screen is locked', opt_audio_s: 'Plays a near-silent sound loop so the browser keeps this page running with the screen locked and the alarm can ring. A media control shows on the lock screen; do not stop it. Costs some battery.', keep_media: 'Alarm armed – keep playing', keep_title: 'Arrive Awake · arrival {t}', locktest: 'Lock-screen test (1 min)', locktest_go: 'Now lock your phone and wait. It should ring in 60 seconds. Tap again to cancel.', locktest_done: 'Did it ring while the screen was locked? Then the in-app alarm works on this phone. (Stops by itself after 15 s.)', locktest_stopped: 'Test cancelled.',
     opt_vibrate: 'Vibrate', opt_vibrate_s: 'Android only.',
     test_alarm: 'Test sound', arm: 'Arm alarm', disarm: 'Disarm', refresh: 'Refresh',
     alarm_at: 'Alarm at', eta: 'Expected arrival', delay: 'Delay', position: 'Train position', gps_est: 'GPS estimate',
@@ -401,7 +403,7 @@ const STR = {
     step_alarm: '3 · Wecker', lead_label: 'Wecken vor Ankunft', min_before: 'Min vorher',
     opt_wake: 'Bildschirm anlassen', opt_wake_s: 'Browser pausieren Seiten bei gesperrtem Bildschirm. Stattdessen Bildschirm dunkel drehen und Handy umgedreht hinlegen.',
     opt_gps: 'GPS als Ersatz-Schätzung', opt_gps_s: 'Wo Echtzeitdaten fehlen (z. B. ÖBB in Österreich), schätzt die Position auf der Strecke die tatsächliche Ankunft.',
-    opt_audio: 'Stiller Audio-Keep-alive', opt_audio_s: 'Spielt eine unhörbare Schleife, damit iOS die Seite länger wach hält. Kostet etwas Akku.',
+    opt_audio: 'Bei gesperrtem Bildschirm weiterlaufen', opt_audio_s: 'Spielt eine fast lautlose Tonschleife, damit der Browser die Seite bei gesperrtem Bildschirm weiterlaufen lässt und der Wecker klingeln kann. Auf dem Sperrbildschirm erscheint eine Mediensteuerung – nicht stoppen. Kostet etwas Akku.', keep_media: 'Wecker aktiv – weiterspielen lassen', keep_title: 'Arrive Awake · Ankunft {t}', locktest: 'Sperrbildschirm-Test (1 Min)', locktest_go: 'Jetzt Handy sperren und warten. In 60 Sekunden sollte es klingeln. Nochmal tippen zum Abbrechen.', locktest_done: 'Hat es bei gesperrtem Bildschirm geklingelt? Dann funktioniert der App-Wecker auf diesem Handy. (Hört nach 15 s von selbst auf.)', locktest_stopped: 'Test abgebrochen.',
     opt_vibrate: 'Vibrieren', opt_vibrate_s: 'Nur Android.',
     test_alarm: 'Ton testen', arm: 'Wecker scharf stellen', disarm: 'Ausschalten', refresh: 'Aktualisieren',
     alarm_at: 'Wecker um', eta: 'Erwartete Ankunft', delay: 'Verspätung', position: 'Zugposition', gps_est: 'GPS-Schätzung',
@@ -901,6 +903,17 @@ function computeLive(info, now){
 
 /* ---------- arming ---------- */
 $('lead').addEventListener('input', e=>{ $('lead-out').value=e.target.value; updateDock(); });
+let lockTest=null;
+$('btn-locktest').addEventListener('click', async ()=>{
+  const m=$('locktest-msg'); m.hidden=false;
+  if(lockTest){ clearTimeout(lockTest); lockTest=null; stopAlarmSound(); stopKeepAlive(); m.textContent=t('locktest_stopped'); return; }
+  await unlockAudio(); startKeepAlive('Arrive Awake'); m.textContent=t('locktest_go');
+  lockTest = setTimeout(()=>{
+    startAlarmSound(); if(navigator.vibrate && $('opt-vibrate').checked) navigator.vibrate([800,300,800,300,800]);
+    m.textContent=t('locktest_done');
+    lockTest = setTimeout(()=>{ stopAlarmSound(); stopKeepAlive(); lockTest=null; }, 15000);
+  }, 60000);
+});
 $('btn-test').addEventListener('click', async ()=>{ await unlockAudio(); startAlarmSound(); if(navigator.vibrate && $('opt-vibrate').checked) navigator.vibrate([400,200,400]); setTimeout(stopAlarmSound, 2500); });
 function armMsg(text){ for(const id of ['arm-msg','dock-msg']){ const m=$(id); m.hidden=!text; m.textContent=text||''; } }
 async function armNow(){
@@ -970,7 +983,7 @@ function startArmed(initialInfo){
   $('setup').hidden=true; $('armed').hidden=false; document.querySelector('meta[name=theme-color]').content='#000000';
   live = initialInfo ? {info:initialInfo} : null;
   if(armed.opts.wake) requestWakeLock();
-  if(armed.opts.audio) startKeepAlive();
+  if(armed.opts.audio) startKeepAlive(t('keep_title',{t:fmtTime(armed.scheduledArrival, armed.tz)}));
   if(armed.opts.gps) startGps();
   document.addEventListener('visibilitychange', onVisible);
   schedulePoll(0); clearInterval(tickTimer); tickTimer=setInterval(tick, 1000);
@@ -1089,16 +1102,18 @@ async function notify(title, body){
 }
 
 /* ---------- audio (generated WAV, played through <audio> so iOS mute switch does not silence it) ---------- */
-function makeWav(seconds, gen){
-  const sr=22050, n=Math.floor(sr*seconds), buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
+function makeWav(seconds, gen, sr=22050){
+  const n=Math.floor(sr*seconds), buf=new ArrayBuffer(44+n*2), v=new DataView(buf);
   const w=(o,s)=>{for(let i=0;i<s.length;i++) v.setUint8(o+i, s.charCodeAt(i));};
   w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVE'); w(12,'fmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true); v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
   for(let i=0;i<n;i++){ const s=Math.max(-1,Math.min(1,gen(i/sr))); v.setInt16(44+i*2, s*32767, true); }
   return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
 }
 const alarmAudio=$('alarm-audio'), keepAudio=$('keep-audio');
-alarmAudio.src = makeWav(2.0, tt=>{ const beat=tt%0.5; const on = beat<0.22 && (tt<1.5); const env = on ? Math.min(1,beat/0.01)*Math.min(1,(0.22-beat)/0.03) : 0; return 0.6*env*(Math.sin(2*Math.PI*880*tt)+0.5*Math.sin(2*Math.PI*1320*tt)); });
-keepAudio.src = makeWav(2.0, tt=> 0.0015*Math.sin(2*Math.PI*40*tt));
+/* Both clips are longer than 5 s: Chrome on Android only gives media a lock-screen media session (and keeps the page running
+   with the screen off) for media longer than five seconds. */
+alarmAudio.src = makeWav(8.0, tt=>{ const c=tt%2, beat=c%0.5; const on = beat<0.22 && (c<1.5); const env = on ? Math.min(1,beat/0.01)*Math.min(1,(0.22-beat)/0.03) : 0; return 0.6*env*(Math.sin(2*Math.PI*880*tt)+0.5*Math.sin(2*Math.PI*1320*tt)); });
+keepAudio.src = makeWav(30.0, tt=> 0.0015*Math.sin(2*Math.PI*40*tt), 8000);   // very quiet 40 Hz hum: inaudible on phone speakers but above Chrome's silence threshold
 let audioUnlocked=false;
 async function unlockAudio(){
   if(audioUnlocked) return;
@@ -1107,8 +1122,16 @@ async function unlockAudio(){
 }
 function startAlarmSound(){ alarmAudio.volume=1; alarmAudio.currentTime=0; alarmAudio.play().catch(()=>{}); }
 function stopAlarmSound(){ alarmAudio.pause(); alarmAudio.currentTime=0; }
-function startKeepAlive(){ keepAudio.volume=1; keepAudio.play().catch(()=>{}); }
-function stopKeepAlive(){ keepAudio.pause(); }
+function startKeepAlive(label){
+  keepAudio.volume=1; keepAudio.play().catch(()=>{});
+  if('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.metadata = new MediaMetadata({title: label || 'Arrive Awake', artist: t('keep_media'), artwork:[{src:'icon-192.png', sizes:'192x192', type:'image/png'}]});
+      navigator.mediaSession.setActionHandler('pause', ()=>{});    // a stray tap on the lock-screen control must not silence the alarm
+    }catch(e){}
+  }
+}
+function stopKeepAlive(){ keepAudio.pause(); if('mediaSession' in navigator){ try{ navigator.mediaSession.metadata=null; navigator.mediaSession.setActionHandler('pause', null); }catch(e){} } }
 
 /* ---------- wake lock ---------- */
 async function requestWakeLock(){ try{ if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', ()=>{ wakeLock=null; }); } }catch(e){ wakeLock=null; } }
