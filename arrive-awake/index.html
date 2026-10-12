@@ -463,8 +463,15 @@ document.querySelectorAll('.lang button').forEach(b=> b.addEventListener('click'
 /* ---------- helpers ---------- */
 const $ = id => document.getElementById(id);
 const API = 'https://api.transitous.org/api/v1/';
-const LD_MODES = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL';
-const ALL_MODES = LD_MODES + ',REGIONAL_RAIL,RAIL,SUBURBAN';
+/* Long-distance search also asks for fast regional trains, because some long-distance operators are filed as regional rail
+   in their feed (WESTbahn WB in the Austrian data); isLongDistance() keeps only those. "RAIL" is not used: it includes
+   subway and metro, which flooded the list at stations like Wien Westbahnhof. */
+const LD_MODES = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_FAST_RAIL';
+const ALL_MODES = 'HIGHSPEED_RAIL,LONG_DISTANCE,NIGHT_RAIL,REGIONAL_FAST_RAIL,REGIONAL_RAIL,SUBURBAN';
+const LD_CLASSES = new Set(['HIGHSPEED_RAIL','LONG_DISTANCE','NIGHT_RAIL']);
+const LD_CATEGORY = /^(WB|RJX?|ICE?|ICN|EC|EN|NJ|D|IR|FLX|RGJ|LE|TGV|FR|FA|IC\d*)/i;   // long-distance product codes that feeds sometimes file as regional
+const isLongDistance = s => LD_CLASSES.has(s.mode) || /westbahn/i.test(s.agencyName||'') || LD_CATEGORY.test(s.displayName||'');
+const isTrain = s => !['SUBWAY','TRAM','BUS','COACH','FERRY','CABLE_CAR','FUNICULAR','AERIAL_LIFT','ODM'].includes(s.mode);
 const RAIL_SET = new Set(['HIGHSPEED_RAIL','LONG_DISTANCE','NIGHT_RAIL','REGIONAL_RAIL','RAIL','SUBURBAN']);
 async function api(path, params){
   const u = new URL(API + path); Object.entries(params).forEach(([k,v])=> v!==undefined && v!==null && u.searchParams.set(k, v));
@@ -698,13 +705,13 @@ function showStationPicked(){ const s=state.station; const cov = s.country ? cov
 $('btn-find').addEventListener('click', ()=>{ openWhen(false); findTrains('start'); });
 $('btn-later').addEventListener('click', ()=> findTrains('later'));
 $('btn-earlier').addEventListener('click', ()=> findTrains('earlier'));
-const PAGE_N = 25;
+const PAGE_N = 60;   // generous: the long-distance filter drops regional expresses after fetching
 /* The list is strictly chronological by scheduled arrival (the time printed on each row), under day headings.
    Transitous itself orders by live time, so its raw order is shuffled when trains are late; we re-sort. */
 async function findTrains(mode){
   if(!state.station){ $('trains-msg').hidden=false; $('trains-msg').textContent=t('pick_station'); return; }
   const whenVal=$('arr-when').value; const when = whenVal ? new Date(whenVal) : new Date();
-  const modes = $('opt-ld').checked ? LD_MODES : ALL_MODES;
+  const ldOnly = $('opt-ld').checked, modes = ldOnly ? LD_MODES : ALL_MODES;
   const cur = state.groups, schedMs = g=> new Date(g.scheduledArrival).getTime();
   if(mode!=='start' && !cur.length) mode='start';
   // what to request (time/direction) and what to keep (from/to on scheduled time; the first search also keeps delayed earlier trains)
@@ -720,7 +727,7 @@ async function findTrains(mode){
     // a feed that returned a full page may have more trains beyond its last one: cut every feed at the tightest such bound so no feed looks emptier than it is
     let lo=-Infinity, hi=Infinity;
     if(lists.length>1) lists.forEach(l=>{ if(l.length>=PAGE_N){ const ts=l.map(sched); if(dir==='LATER') hi=Math.min(hi, Math.max(...ts)); else lo=Math.max(lo, Math.min(...ts)); } });
-    const all = lists.flat().filter(s=>{ const sc=sched(s); const k = byLive ? Math.max(sc, new Date(s.place.arrival||sc).getTime()) : sc; return k>=from && sc<to && sc>=lo && sc<=hi; });
+    const all = lists.flat().filter(s=>{ const sc=sched(s); const k = byLive ? Math.max(sc, new Date(s.place.arrival||sc).getTime()) : sc; return k>=from && sc<to && sc>=lo && sc<=hi && isTrain(s) && (!ldOnly || isLongDistance(s)); });
     const groups = groupTrains(all);
     if(mode!=='start' && !groups.length){ $('trains-msg').textContent=t('no_trains'); $('train-more').hidden=false; return; }
     state.groups = groups;
